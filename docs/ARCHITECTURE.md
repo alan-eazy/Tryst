@@ -15,6 +15,12 @@ Tryst uses generic generator slots instead of hard-wired OSC 1 / OSC 2 sections.
 
 The engine API is intentionally host-agnostic. Plugin wrapper code should translate host MIDI/MPE and automation into engine-friendly events rather than coupling DSP code to a particular plugin SDK.
 
+### 1.1 Polyphonic voice layer
+
+`VoiceManager` owns a fixed pool of 16 voices. Each voice owns four generator slots plus preallocated stereo scratch buffers and a voice-local amplitude envelope. Note allocation prefers inactive voices and deterministically steals the oldest active voice when the pool is exhausted. This keeps the render path bounded and allocation-free.
+
+Engine creation and replacement happen on the control side. The audio render path only uses already-prepared engine instances.
+
 ## 2. Modulation
 
 The modulation matrix is central infrastructure. Engines and effects expose destinations through stable destination IDs; LFOs, envelopes, MSEGs, random sources, macros and expressive controls provide sources.

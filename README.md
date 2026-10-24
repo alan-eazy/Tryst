@@ -12,8 +12,11 @@
 
 ## Initial architecture
 
-- Four generic generator slots
+- Four generic generator slots per voice
 - Engine interface for analog, wavetable, sampler, granular, spectral, additive, physical-model and noise engines
+- 16-voice polyphonic manager with deterministic oldest-voice stealing
+- Per-voice ADSR amplitude envelope
+- Reusable LFO modulation source
 - Central modulation matrix with bipolar depth
 - Macro/XY-ready modulation sources
 - Voice-local and global modulation distinction
@@ -24,4 +27,4 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/
 
 ## Status
 
-This repository currently contains the architecture foundation and a reference analog engine. Plugin-wrapper integration is deliberately kept separate so the DSP core can stay testable and host-agnostic.
+The DSP core now contains the architecture foundation, a reference analog engine, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO and smoke tests. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.
