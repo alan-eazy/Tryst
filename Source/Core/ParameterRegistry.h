@@ -49,6 +49,10 @@ inline constexpr DestinationId filter2Resonance = destinationId("filter.2.resona
 inline constexpr DestinationId filter2Mode = destinationId("filter.2.mode");
 inline constexpr DestinationId filterRouting = destinationId("filter.routing");
 inline constexpr DestinationId filterParallelBlend = destinationId("filter.parallel_blend");
+inline constexpr DestinationId fxMix = destinationId("fx.mix");
+inline constexpr DestinationId fxDriveAmount = destinationId("fx.drive.amount");
+inline constexpr DestinationId fxDelayTime = destinationId("fx.delay.time");
+inline constexpr DestinationId fxDelayFeedback = destinationId("fx.delay.feedback");
 }
 
 struct ParameterDescriptor

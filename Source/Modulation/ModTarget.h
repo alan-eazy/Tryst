@@ -9,6 +9,7 @@ enum class TargetDomain : std::uint8_t
 {
     generator,
     filter,
+    effect,
     global
 };
 

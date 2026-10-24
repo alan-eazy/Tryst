@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.12.0 LANGUAGES CXX)
+project(Tryst VERSION 0.13.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,10 @@ add_library(tryst_core STATIC
     Source/DSP/StateVariableFilter.cpp
     Source/DSP/WavetableData.cpp
     Source/DSP/WavetableEngine.cpp
+    Source/FX/DelayEffect.cpp
+    Source/FX/DriveEffect.cpp
+    Source/FX/EffectFactory.cpp
+    Source/FX/FxRack.cpp
     Source/Modulation/AdsrEnvelope.cpp
     Source/Modulation/FastModulationRuntime.cpp
     Source/Modulation/Lfo.cpp
@@ -70,4 +74,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_expression_tuning_tests Tests/ExpressionTuningTests.cpp)
     target_link_libraries(tryst_expression_tuning_tests PRIVATE tryst_core)
     add_test(NAME tryst_expression_tuning_tests COMMAND tryst_expression_tuning_tests)
+
+    add_executable(tryst_fx_rack_tests Tests/FxRackTests.cpp)
+    target_link_libraries(tryst_fx_rack_tests PRIVATE tryst_core)
+    add_test(NAME tryst_fx_rack_tests COMMAND tryst_fx_rack_tests)
 endif()

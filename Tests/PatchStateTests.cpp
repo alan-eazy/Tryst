@@ -15,6 +15,9 @@ tryst::state::PatchState makePatch()
     patch.generators[1] = { true, tryst::dsp::EngineKind::wavetable };
     patch.generators[2].enabled = false;
     patch.generators[3].enabled = false;
+    patch.effects[0] = { true, tryst::fx::EffectKind::drive };
+    patch.effects[1] = { true, tryst::fx::EffectKind::delay };
+    patch.effectOrder = { 1, 0, 2, 3 };
     patch.ampEnvelope = { 0.002f, 0.08f, 0.72f, 0.15f };
     patch.macros[0] = 0.75f;
     patch.macros[3] = 0.25f;
@@ -41,7 +44,19 @@ tryst::state::PatchState makePatch()
     patch.parameters.push_back({ tryst::mod::TargetDomain::generator, 1, "engine.wavetable.position", 0.70f });
     patch.parameters.push_back({ tryst::mod::TargetDomain::filter, 0, "filter.1.enabled", 1.0f });
     patch.parameters.push_back({ tryst::mod::TargetDomain::filter, 0, "filter.1.cutoff", 0.65f });
+    patch.parameters.push_back({ tryst::mod::TargetDomain::effect, 0, "fx.drive.amount", 0.80f });
+    patch.parameters.push_back({ tryst::mod::TargetDomain::effect, 1, "fx.delay.feedback", 0.35f });
 
+    patch.routes.push_back({
+        false,
+        { tryst::mod::SourceType::macro, 1 },
+        tryst::mod::TargetDomain::effect,
+        0,
+        "fx.mix",
+        0.50f,
+        0.0f,
+        true
+    });
     patch.routes.push_back({
         false,
         { tryst::mod::SourceType::macro, 0 },
@@ -94,6 +109,10 @@ void testRoundTrip()
     assert(decoded.patch->schemaVersion == tryst::state::PatchState::currentSchemaVersion);
     assert(decoded.patch->generators[1].enabled);
     assert(decoded.patch->generators[1].kind == tryst::dsp::EngineKind::wavetable);
+    assert(decoded.patch->effects[0].enabled);
+    assert(decoded.patch->effects[0].kind == tryst::fx::EffectKind::drive);
+    assert(decoded.patch->effects[1].kind == tryst::fx::EffectKind::delay);
+    assert(decoded.patch->effectOrder[0] == 1 && decoded.patch->effectOrder[1] == 0);
     assert(decoded.patch->parameters.size() == source.parameters.size());
     assert(decoded.patch->routes.size() == source.routes.size());
     assert(decoded.patch->msegs[0].points.size() == 3);
@@ -114,7 +133,7 @@ void testApplyToVoiceManager()
     tryst::dsp::VoiceManager manager;
     manager.prepare(48000.0, 128);
     assert(tryst::state::PatchApplier::apply(*decoded.patch, manager));
-    assert(manager.modulationRouteCount() == 1);
+    assert(manager.modulationRouteCount() == 2);
     assert(manager.fastModulationRouteCount() == 3);
     assert(std::abs(manager.tuningOffsetSemitones(60) - 0.37f) < 0.00001f);
 
@@ -145,15 +164,26 @@ void testDecodeValidation()
     assert(migrated.patch->msegs[0].points.empty());
     assert(migrated.patch->steps[0].values.empty());
     const auto migratedText = tryst::state::PatchCodec::encode(*migrated.patch);
-    assert(migratedText.rfind("TRYST_PATCH 3\n", 0) == 0);
+    assert(migratedText.rfind("TRYST_PATCH 4\n", 0) == 0);
+    assert(!migrated.patch->effects[0].enabled);
+    assert(migrated.patch->effectOrder[0] == 0 && migrated.patch->effectOrder[1] == 1);
 
     const auto migratedV2 = tryst::state::PatchCodec::decode("TRYST_PATCH 2\nend\n");
     assert(migratedV2);
     assert(migratedV2.patch->schemaVersion == tryst::state::PatchState::currentSchemaVersion);
     assert(std::abs(migratedV2.patch->tuningOffsetsSemitones[60]) < 0.00001f);
 
+    const auto migratedV3 = tryst::state::PatchCodec::decode("TRYST_PATCH 3\nend\n");
+    assert(migratedV3);
+    assert(!migratedV3.patch->effects[0].enabled);
+
     const auto badTuning = tryst::state::PatchCodec::decode("TRYST_PATCH 3\ntuning 60 50\nend\n");
     assert(!badTuning);
+
+    const auto badEffect = tryst::state::PatchCodec::decode("TRYST_PATCH 4\neffect 0 1 unknown\nend\n");
+    assert(!badEffect);
+    const auto badOrder = tryst::state::PatchCodec::decode("TRYST_PATCH 4\nfx_order 0 0 2 3\nend\n");
+    assert(!badOrder);
 
     const auto badMseg = tryst::state::PatchCodec::decode(
         "TRYST_PATCH 2\nmseg 0 1 1 2 0 0 0.5 1\nend\n");

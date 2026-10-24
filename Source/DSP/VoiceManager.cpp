@@ -12,6 +12,7 @@ void VoiceManager::prepare(double sampleRate, std::uint32_t maxBlockSize)
             voice.clearEngine(0);
     }
 
+    fxRack.prepare(sampleRate, maxBlockSize);
     ageCounter = 0;
 }
 
@@ -19,6 +20,7 @@ void VoiceManager::reset() noexcept
 {
     for (auto& voice : voices)
         voice.reset();
+    fxRack.reset();
     ageCounter = 0;
 }
 
@@ -83,6 +85,53 @@ bool VoiceManager::setFilterParameter(tryst::params::DestinationId destination, 
     return broadcastTarget(target, modulation.evaluate(target, normalized));
 }
 
+bool VoiceManager::setEffectKind(std::size_t slot, tryst::fx::EffectKind kind)
+{
+    if (slot >= tryst::fx::FxRack::maxSlots)
+        return false;
+    if (!fxRack.setEffectKind(slot, kind))
+        return false;
+
+    for (std::size_t i = 0; i < baseTargets.size(); ++i)
+    {
+        const auto& entry = baseTargets[i];
+        if (entry.target.domain == tryst::mod::TargetDomain::effect && entry.target.slot == slot)
+            refreshTarget(entry.target);
+    }
+    return true;
+}
+
+void VoiceManager::clearEffect(std::size_t slot) noexcept
+{
+    fxRack.clearEffect(slot);
+}
+
+bool VoiceManager::swapEffects(std::size_t a, std::size_t b) noexcept
+{
+    // Rack order is independent from slot identity, so slot-targeted automation
+    // and modulation continue to address the same effect after reordering.
+    return fxRack.swapSlots(a, b);
+}
+
+bool VoiceManager::setEffectOrder(std::span<const std::uint8_t> slotOrder) noexcept
+{
+    return fxRack.setOrder(slotOrder);
+}
+
+bool VoiceManager::setEffectParameter(std::size_t slot,
+                                      tryst::params::DestinationId destination,
+                                      float normalized) noexcept
+{
+    if (slot >= tryst::fx::FxRack::maxSlots)
+        return false;
+    const tryst::mod::TargetId target { tryst::mod::TargetDomain::effect,
+                                        static_cast<std::uint8_t>(slot),
+                                        destination };
+    if (!baseTargets.set(target, normalized))
+        return false;
+    return broadcastTarget(target, modulation.evaluate(target, normalized));
+}
+
 void VoiceManager::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
 {
     for (auto& voice : voices)
@@ -92,6 +141,8 @@ void VoiceManager::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameter
 bool VoiceManager::addModulationRoute(tryst::mod::Route route) noexcept
 {
     if (route.target.domain == tryst::mod::TargetDomain::generator && route.target.slot >= Voice::generatorSlots)
+        return false;
+    if (route.target.domain == tryst::mod::TargetDomain::effect && route.target.slot >= tryst::fx::FxRack::maxSlots)
         return false;
 
     if (!ensureTargetBase(route.target))
@@ -172,7 +223,8 @@ bool VoiceManager::configureVoiceStep(std::size_t index,
 
 bool VoiceManager::addFastModulationRoute(tryst::mod::Route route) noexcept
 {
-    if (route.target.domain == tryst::mod::TargetDomain::global)
+    if (route.target.domain == tryst::mod::TargetDomain::global
+        || route.target.domain == tryst::mod::TargetDomain::effect)
         return false;
     if (route.target.domain == tryst::mod::TargetDomain::generator && route.target.slot >= Voice::generatorSlots)
         return false;
@@ -254,6 +306,7 @@ void VoiceManager::render(ProcessContext& context) noexcept
     for (auto& voice : voices)
         if (voice.isActive())
             voice.render(context);
+    fxRack.process(context.left, context.right);
 }
 
 std::size_t VoiceManager::activeVoiceCount() const noexcept
@@ -294,6 +347,9 @@ bool VoiceManager::broadcastTarget(tryst::mod::TargetId target, float normalized
             success = voice.setFilterParameter(target.parameter, normalized) && success;
         return success;
     }
+
+    if (target.domain == tryst::mod::TargetDomain::effect)
+        return fxRack.setParameter(target.slot, target.parameter, normalized);
 
     return false;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DSP/Engine.h"
+#include "FX/Effect.h"
 #include "Modulation/AdsrEnvelope.h"
 #include "Modulation/Lfo.h"
 #include "Modulation/Mseg.h"
@@ -17,6 +18,12 @@ struct GeneratorState
 {
     bool enabled = false;
     tryst::dsp::EngineKind kind = tryst::dsp::EngineKind::analog;
+};
+
+struct EffectState
+{
+    bool enabled = false;
+    tryst::fx::EffectKind kind = tryst::fx::EffectKind::drive;
 };
 
 struct ParameterState
@@ -61,11 +68,13 @@ struct RouteState
 
 struct PatchState
 {
-    static constexpr std::uint32_t currentSchemaVersion = 3;
+    static constexpr std::uint32_t currentSchemaVersion = 4;
     static constexpr std::uint32_t minimumReadableSchemaVersion = 1;
 
     std::uint32_t schemaVersion = currentSchemaVersion;
     std::array<GeneratorState, 4> generators {{ { true, tryst::dsp::EngineKind::analog }, {}, {}, {} }};
+    std::array<EffectState, 4> effects {};
+    std::array<std::uint8_t, 4> effectOrder { 0, 1, 2, 3 };
     tryst::mod::AdsrEnvelope::Parameters ampEnvelope {};
     std::array<float, 8> macros {};
     float morphX = 0.0f;

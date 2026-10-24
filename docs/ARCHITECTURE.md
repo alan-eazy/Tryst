@@ -89,6 +89,12 @@ Parallel and serial paths should be possible without requiring a fully general g
 
 Each voice owns two topology-preserving-transform state-variable filters. Each filter can operate as low-pass, band-pass, high-pass or notch, with logarithmic cutoff mapping and resonance control. The two filters can run in series or in parallel; parallel mode exposes a blend control between both filter outputs. Filter state is voice-local, while parameters are broadcast through `VoiceManager` and use the same stable destination registry as generator parameters.
 
+### 3.2 Global FX rack
+
+After all active voices are summed, `VoiceManager` processes one global `FxRack`. The rack has four stable automation slots and a separate four-position processing-order array. Reordering therefore changes signal flow without changing which slot a macro, patch parameter or automation target addresses. Effect construction and delay-buffer allocation happen on the control/prepare side; `process()` performs no heap allocation.
+
+The first modules are `DriveEffect` (normalized soft clipping with dry/wet mix) and `DelayEffect` (preallocated stereo circular buffers, interpolated taps and cross-feedback). FX destinations use the same stable parameter registry and `TargetId` structure as generators/filters. Macro/XY control-rate routes may target an FX slot; the voice-local fast lane deliberately rejects FX targets because global post-voice processing is not voice-local.
+
 ## 4. Performance layer
 
 The performance surface should expose:
@@ -103,9 +109,9 @@ A deeper Design view can expose engines, modulation, routing and effect details.
 
 ## 5. Presets
 
-Patch files are versioned data, not binary object dumps. Stable parameter string IDs are the compatibility contract; the 32-bit runtime destination hashes are not persisted. `PatchCodec` schema 3 serializes engine topology, normalized parameters, ADSR, macros/XY, voice LFO/MSEG/step settings, per-note microtuning offsets, and both control-rate and fast modulation routes into deterministic UTF-8 text. Schemas 1 and 2 are migrated in memory on decode. `PatchApplier` rebuilds that state through the public `VoiceManager` control API. Decode errors and unsupported schema versions fail explicitly rather than being silently coerced.
+Patch files are versioned data, not binary object dumps. Stable parameter string IDs are the compatibility contract; the 32-bit runtime destination hashes are not persisted. `PatchCodec` schema 4 serializes engine topology, normalized parameters, ADSR, macros/XY, voice LFO/MSEG/step settings, per-note microtuning offsets, FX topology/order/parameters, and both control-rate and fast modulation routes into deterministic UTF-8 text. Schemas 1, 2 and 3 are migrated in memory on decode. `PatchApplier` rebuilds that state through the public `VoiceManager` control API. Decode errors and unsupported schema versions fail explicitly rather than being silently coerced.
 
-Heavy engine assets are deliberately not embedded in schema 3. Sample, wavetable and future spectral data remain immutable external assets and will use a separate reference/resolution layer. See [`PATCH_FORMAT.md`](PATCH_FORMAT.md).
+Heavy engine assets are deliberately not embedded in schema 4. Sample, wavetable and future spectral data remain immutable external assets and will use a separate reference/resolution layer. See [`PATCH_FORMAT.md`](PATCH_FORMAT.md).
 
 Planned patch states:
 
