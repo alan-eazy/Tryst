@@ -5,10 +5,11 @@
 
 #include <algorithm>
 #include <array>
-#include <charconv>
+#include <cerrno>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <new>
@@ -568,10 +569,10 @@ bool paramsTextToValue(const clap_plugin_t* plugin, clap_id paramId, const char*
         }
     }
 
-    double parsed = 0.0;
-    const auto end = text + std::strlen(text);
-    const auto result = std::from_chars(text, end, parsed);
-    if (result.ec != std::errc {} || result.ptr != end || !std::isfinite(parsed))
+    errno = 0;
+    char* parseEnd = nullptr;
+    const auto parsed = std::strtod(text, &parseEnd);
+    if (parseEnd == text || parseEnd == nullptr || *parseEnd != '\0' || errno == ERANGE || !std::isfinite(parsed))
         return false;
     *value = std::clamp(parsed, 0.0, 1.0);
     return true;
