@@ -7,12 +7,12 @@
 - [x] Stable parameter ID policy
 - [x] Initial modulation route model
 - [x] Reference analog engine
-- [ ] Voice manager and polyphony
-- [ ] ADSR + LFO modulators
+- [x] Voice manager and polyphony
+- [x] ADSR + LFO modulators
 - [ ] Parameter registry / normalized destination map
 - [ ] Host wrapper (VST3 + CLAP first)
 - [ ] Basic preset serialization
-- [ ] Unit tests and DSP smoke tests
+- [x] Unit tests and DSP smoke tests
 
 ## P1 — Core instrument
 
