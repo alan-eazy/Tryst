@@ -9,6 +9,7 @@
 - [x] Reference analog engine
 - [x] Voice manager and polyphony
 - [x] ADSR + LFO modulators
+- [x] Voice-local fast LFO modulation lane (16-sample bounded updates; true per-sample paths still selective/future)
 - [x] Parameter registry / normalized destination map
 - [ ] Host wrapper (VST3 + CLAP first)
 - [ ] Basic preset serialization
