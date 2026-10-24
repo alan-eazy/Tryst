@@ -1,5 +1,6 @@
 #include "VoiceManager.h"
 #include <algorithm>
+#include <limits>
 
 namespace tryst::dsp
 {
@@ -34,6 +35,14 @@ void VoiceManager::clearEngine(std::size_t slot) noexcept
 {
     for (auto& voice : voices)
         voice.clearEngine(slot);
+}
+
+bool VoiceManager::setEngineParameter(std::size_t slot, tryst::params::DestinationId destination, float normalized) noexcept
+{
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.setEngineParameter(slot, destination, normalized) && success;
+    return success;
 }
 
 void VoiceManager::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
