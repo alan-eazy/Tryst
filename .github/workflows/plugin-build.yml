@@ -35,3 +35,54 @@ jobs:
           name: Tryst-linux-test-build
           path: dist
           if-no-files-found: error
+
+  macos-ableton-vst3:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure universal macOS build
+        run: >-
+          cmake -S . -B build
+          -DTRYST_BUILD_PLUGINS=ON
+          -DTRYST_BUILD_TESTS=ON
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package Ableton VST3
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          vst3_path="$(find build -type d -name 'Tryst.vst3' -print -quit)"
+          test -n "$vst3_path"
+          plugin_binary="$(find "$vst3_path/Contents/MacOS" -type f -print -quit)"
+          test -n "$plugin_binary"
+          lipo -archs "$plugin_binary" | grep -q arm64
+          lipo -archs "$plugin_binary" | grep -q x86_64
+          codesign --force --deep --sign - "$vst3_path"
+          codesign --verify --deep --strict --verbose=2 "$vst3_path"
+          cp -R "$vst3_path" dist/Tryst.vst3
+          cat > dist/INSTALL-MAC.txt <<'EOF'
+          Tryst macOS Ableton test build
+
+          1. Quit Ableton Live.
+          2. Copy Tryst.vst3 to either:
+             ~/Library/Audio/Plug-Ins/VST3/
+             or /Library/Audio/Plug-Ins/VST3/
+          3. If macOS blocks the downloaded test plug-in, run:
+             xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Tryst.vst3
+          4. Open Ableton Live > Settings/Preferences > Plug-Ins.
+          5. Enable VST3 System Folders.
+          6. Hold Option and click Rescan for a deep rescan.
+
+          This bundle is Universal: Apple Silicon arm64 + Intel x86_64.
+          EOF
+      - name: Upload macOS Ableton test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tryst-macOS-universal-Ableton-VST3
+          path: dist
+          if-no-files-found: error
