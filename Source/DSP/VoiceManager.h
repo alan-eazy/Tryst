@@ -31,6 +31,11 @@ public:
     void setMorphY(float normalized) noexcept;
     [[nodiscard]] bool setModulationSource(tryst::mod::SourceId source, float value) noexcept;
 
+    [[nodiscard]] bool configureVoiceLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept;
+    [[nodiscard]] bool addFastModulationRoute(tryst::mod::Route route) noexcept;
+    void clearFastModulationRoutes() noexcept;
+    [[nodiscard]] std::size_t fastModulationRouteCount() const noexcept;
+
     void noteOn(const NoteEvent& event) noexcept;
     void noteOff(std::int32_t note, float releaseVelocity = 0.0f) noexcept;
     void render(ProcessContext& context) noexcept;
