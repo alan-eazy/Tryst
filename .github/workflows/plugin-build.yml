@@ -19,3 +19,19 @@ jobs:
         run: cmake --build build --parallel 2
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Package plugins
+        run: |
+          set -euxo pipefail
+          mkdir -p dist
+          clap_path="$(find build -type f -name 'Tryst.clap' -print -quit)"
+          vst3_path="$(find build -type d -name 'Tryst.vst3' -print -quit)"
+          test -n "$clap_path"
+          test -n "$vst3_path"
+          cp "$clap_path" dist/Tryst.clap
+          cp -R "$vst3_path" dist/Tryst.vst3
+      - name: Upload test build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tryst-linux-test-build
+          path: dist
+          if-no-files-found: error
