@@ -22,7 +22,7 @@
 - [~] Wavetable engine (core engine complete; file import + band-limited mipmaps pending)
 - [~] Sampler / multisample engine (single-sample playback/looping complete; multisample mapping + file decode pending)
 - [x] Granular engine (shared sample assets + position/size/density/spray/pitch cloud core)
-- [ ] Noise / texture generator
+- [x] Noise / texture generator (white/pink/brown morph + stereo + tuned sample-and-hold texture)
 - [ ] MSEG and step modulation
 - [~] 8 macros + XY control (runtime/routing complete; performance UI pending)
 - [ ] Flexible FX rack
