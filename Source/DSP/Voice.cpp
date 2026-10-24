@@ -100,6 +100,22 @@ bool Voice::configureFastLfo(std::size_t index, float rateHz, tryst::mod::LfoWav
     return fastModulation.configureLfo(index, rateHz, waveform);
 }
 
+bool Voice::configureFastMseg(std::size_t index,
+                              std::span<const tryst::mod::MsegPoint> points,
+                              float rateHz,
+                              bool loop) noexcept
+{
+    return fastModulation.configureMseg(index, points, rateHz, loop);
+}
+
+bool Voice::configureFastStep(std::size_t index,
+                              std::span<const float> values,
+                              float rateHz,
+                              bool loop) noexcept
+{
+    return fastModulation.configureStep(index, values, rateHz, loop);
+}
+
 bool Voice::addFastModulationRoute(tryst::mod::Route route) noexcept
 {
     return fastModulation.addRoute(route);
@@ -215,4 +231,5 @@ void Voice::stopEngines() noexcept
             engine->reset();
         }
     }
+}
 }
