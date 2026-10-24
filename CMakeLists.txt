@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.9.0 LANGUAGES CXX)
+project(Tryst VERSION 0.10.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,6 +11,7 @@ add_library(tryst_core STATIC
     Source/DSP/EngineFactory.cpp
     Source/DSP/FilterChain.cpp
     Source/DSP/GranularEngine.cpp
+    Source/DSP/NoiseEngine.cpp
     Source/DSP/SampleData.cpp
     Source/DSP/SamplerEngine.cpp
     Source/DSP/Voice.cpp
@@ -54,4 +55,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_patch_state_tests Tests/PatchStateTests.cpp)
     target_link_libraries(tryst_patch_state_tests PRIVATE tryst_core)
     add_test(NAME tryst_patch_state_tests COMMAND tryst_patch_state_tests)
+
+    add_executable(tryst_noise_engine_tests Tests/NoiseEngineTests.cpp)
+    target_link_libraries(tryst_noise_engine_tests PRIVATE tryst_core)
+    add_test(NAME tryst_noise_engine_tests COMMAND tryst_noise_engine_tests)
 endif()
