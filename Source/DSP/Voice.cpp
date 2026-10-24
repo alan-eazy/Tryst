@@ -50,6 +50,17 @@ void Voice::clearEngine(std::size_t slotIndex) noexcept
         slots[slotIndex].setEngine({});
 }
 
+bool Voice::setEngineParameter(std::size_t slotIndex, tryst::params::DestinationId destination, float normalized) noexcept
+{
+    if (slotIndex >= slots.size())
+        return false;
+
+    if (auto* engine = slots[slotIndex].get())
+        return engine->setParameter(destination, normalized);
+
+    return false;
+}
+
 void Voice::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
 {
     ampEnvelope.setParameters(parameters);
@@ -131,5 +142,4 @@ void Voice::stopEngines() noexcept
             engine->reset();
         }
     }
-}
 }

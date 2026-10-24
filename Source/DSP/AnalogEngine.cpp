@@ -19,8 +19,8 @@ void AnalogEngine::reset() noexcept
 
 void AnalogEngine::noteOn(const NoteEvent& note) noexcept
 {
-    const auto tunedNote = static_cast<float>(note.note) + note.pitchBendSemitones + detuneSemitones;
-    frequency = midiToHz(tunedNote);
+    playedMidiNote = static_cast<float>(note.note) + note.pitchBendSemitones;
+    updateFrequency();
     velocity = std::clamp(note.velocity, 0.0f, 1.0f);
     active = true;
 }
@@ -49,6 +49,31 @@ void AnalogEngine::render(ProcessContext& context) noexcept
     }
 }
 
+bool AnalogEngine::setParameter(tryst::params::DestinationId destination, float normalized) noexcept
+{
+    normalized = std::clamp(normalized, 0.0f, 1.0f);
+
+    if (destination == tryst::params::destination::generatorLevel)
+    {
+        setLevel(normalized);
+        return true;
+    }
+
+    if (destination == tryst::params::destination::generatorTune)
+    {
+        setDetuneSemitones((normalized - 0.5f) * 48.0f);
+        return true;
+    }
+
+    if (destination == tryst::params::destination::analogShape)
+    {
+        setShape(normalized);
+        return true;
+    }
+
+    return false;
+}
+
 void AnalogEngine::setShape(float value) noexcept
 {
     shape = std::clamp(value, 0.0f, 1.0f);
@@ -61,7 +86,8 @@ void AnalogEngine::setLevel(float value) noexcept
 
 void AnalogEngine::setDetuneSemitones(float value) noexcept
 {
-    detuneSemitones = std::clamp(value, -48.0f, 48.0f);
+    detuneSemitones = std::clamp(value, -24.0f, 24.0f);
+    updateFrequency();
 }
 
 float AnalogEngine::oscillator(float p) const noexcept
@@ -83,5 +109,10 @@ float AnalogEngine::oscillator(float p) const noexcept
 float AnalogEngine::midiToHz(float midiNote) noexcept
 {
     return 440.0f * std::pow(2.0f, (midiNote - 69.0f) / 12.0f);
+}
+
+void AnalogEngine::updateFrequency() noexcept
+{
+    frequency = midiToHz(playedMidiNote + detuneSemitones);
 }
 }

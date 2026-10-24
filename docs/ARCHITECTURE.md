@@ -15,15 +15,23 @@ Tryst uses generic generator slots instead of hard-wired OSC 1 / OSC 2 sections.
 
 The engine API is intentionally host-agnostic. Plugin wrapper code should translate host MIDI/MPE and automation into engine-friendly events rather than coupling DSP code to a particular plugin SDK.
 
-### 1.1 Polyphonic voice layer
+## 1.1 Polyphonic voice layer
 
 `VoiceManager` owns a fixed pool of 16 voices. Each voice owns four generator slots plus preallocated stereo scratch buffers and a voice-local amplitude envelope. Note allocation prefers inactive voices and deterministically steals the oldest active voice when the pool is exhausted. This keeps the render path bounded and allocation-free.
 
 Engine creation and replacement happen on the control side. The audio render path only uses already-prepared engine instances.
 
+### 1.2 Wavetable assets
+
+`WavetableData` is an immutable frame asset created outside the audio thread. `WavetableEngine` performs linear interpolation both within a frame and between adjacent frames, so wavetable position can be modulated continuously without rebuilding data. The current built-in table contains sine, triangle, saw and square frames. Arbitrary frame sets can already be supplied in memory; file import, analysis and band-limited mipmap generation are intentionally deferred to the asset-loading layer.
+
 ## 2. Modulation
 
 The modulation matrix is central infrastructure. Engines and effects expose destinations through stable destination IDs; LFOs, envelopes, MSEGs, random sources, macros and expressive controls provide sources.
+
+### 2.1 Normalized destinations
+
+Engine parameters are addressed through stable 32-bit destination IDs derived from persistent string IDs using FNV-1a. The registry checks built-in destination collisions at compile time. Common generator controls such as level and tune share destinations across engines, while engine-specific destinations such as analog shape and wavetable position remain explicit. This gives the modulation layer one normalized 0..1 control surface while preserving long-term preset IDs.
 
 Long-term requirements:
 

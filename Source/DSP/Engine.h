@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Core/ParameterRegistry.h"
 #include <cstdint>
 #include <span>
 #include <string_view>
@@ -47,5 +48,6 @@ public:
     virtual void noteOn(const NoteEvent& note) noexcept = 0;
     virtual void noteOff(std::int32_t note, float releaseVelocity) noexcept = 0;
     virtual void render(ProcessContext& context) noexcept = 0;
+    [[nodiscard]] virtual bool setParameter(tryst::params::DestinationId destination, float normalized) noexcept = 0;
 };
 }
