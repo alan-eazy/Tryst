@@ -9,7 +9,7 @@
 - [x] Reference analog engine
 - [x] Voice manager and polyphony
 - [x] ADSR + LFO modulators
-- [ ] Parameter registry / normalized destination map
+- [x] Parameter registry / normalized destination map
 - [ ] Host wrapper (VST3 + CLAP first)
 - [ ] Basic preset serialization
 - [x] Unit tests and DSP smoke tests
@@ -18,7 +18,7 @@
 
 - [ ] Four generator slots
 - [ ] Dual multimode filters with serial/parallel routing
-- [ ] Wavetable engine and user wavetable import
+- [~] Wavetable engine (core engine complete; file import + band-limited mipmaps pending)
 - [ ] Sampler / multisample engine
 - [ ] Granular engine
 - [ ] Noise / texture generator
