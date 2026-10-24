@@ -11,7 +11,7 @@
 - [x] ADSR + LFO modulators
 - [x] Voice-local fast LFO modulation lane (16-sample bounded updates; true per-sample paths still selective/future)
 - [x] Parameter registry / normalized destination map
-- [ ] Host wrapper (VST3 + CLAP first)
+- [~] Host wrapper (host-neutral engine/event/parameter/state layer complete; CLAP-first + VST3 adapter glue pending)
 - [x] Basic preset serialization (schema-4 text codec with schema-1/2/3 migration; external asset references still future)
 - [x] Unit tests and DSP smoke tests
 
