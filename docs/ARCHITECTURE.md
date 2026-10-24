@@ -33,6 +33,12 @@ The modulation matrix is central infrastructure. Engines and effects expose dest
 
 Engine parameters are addressed through stable 32-bit destination IDs derived from persistent string IDs using FNV-1a. The registry checks built-in destination collisions at compile time. Common generator controls such as level and tune share destinations across engines, while engine-specific destinations such as analog shape and wavetable position remain explicit. This gives the modulation layer one normalized 0..1 control surface while preserving long-term preset IDs.
 
+### 2.2 Runtime routing and performance sources
+
+Modulation routes now target a domain, slot and stable parameter destination rather than a bare parameter ID. This lets the same parameter ID be addressed independently on generator slots 1–4 while filters remain voice-local destinations. `ModulationRuntime` stores source values in fixed-size arrays and evaluates routes without heap allocation. Eight macro sources plus X/Y performance sources are wired through `VoiceManager`; changing a performance source refreshes all tracked base targets and broadcasts the resulting normalized values to every voice.
+
+The current performance-source path is intentionally control-rate. It is suitable for macros, XY gestures and host automation, but it is not presented as the final audio-rate LFO/envelope path. Selected audio-rate-capable destinations will later receive a dedicated per-sample or small-block modulation path.
+
 Long-term requirements:
 
 - Bipolar/unipolar modulation

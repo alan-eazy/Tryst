@@ -1,18 +1,19 @@
 #pragma once
 
 #include "ModSource.h"
+#include "ModTarget.h"
+#include "SourceSnapshot.h"
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstdint>
 
 namespace tryst::mod
 {
 struct Route
 {
     SourceId source;
-    std::uint32_t destination = 0;
-    float depth = 0.0f;   // bipolar: -1..+1
+    TargetId target;
+    float depth = 0.0f;   // bipolar modulation amount: -1..+1
     float curve = 0.0f;   // reserved for response shaping
     bool enabled = true;
 };
@@ -46,11 +47,10 @@ public:
     [[nodiscard]] bool addRoute(Route route) noexcept;
     void clear() noexcept;
 
-    // baseValue is expected to be normalized 0..1. Source values are normally -1..1.
-    [[nodiscard]] float apply(std::uint32_t destination,
+    // Base values are normalized 0..1. Sources may be bipolar (-1..1) or unipolar (0..1).
+    [[nodiscard]] float apply(TargetId target,
                               float baseValue,
-                              SourceId source,
-                              float sourceValue) const noexcept;
+                              const SourceSnapshot& sources) const noexcept;
 
     [[nodiscard]] std::size_t routeCount() const noexcept { return routes.size(); }
 

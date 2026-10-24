@@ -32,7 +32,7 @@ private:
     float frequency = 440.0f;
     float playedMidiNote = 69.0f;
     float velocity = 0.0f;
-    float level = 0.2f;
+    float level = 0.65f;
     float shape = 0.0f; // 0=sine, .5=saw, 1=square; continuous morph
     float detuneSemitones = 0.0f;
     bool active = false;

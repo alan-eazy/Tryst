@@ -23,7 +23,7 @@
 - [ ] Granular engine
 - [ ] Noise / texture generator
 - [ ] MSEG and step modulation
-- [ ] 8 macros + XY control
+- [~] 8 macros + XY control (runtime/routing complete; performance UI pending)
 - [ ] Flexible FX rack
 - [ ] MPE and microtuning
 - [ ] Smart randomize / mutate with locks
