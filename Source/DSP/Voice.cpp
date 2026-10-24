@@ -10,6 +10,7 @@ void Voice::prepare(double newSampleRate, std::uint32_t maxBlockSize)
     scratchLeft.assign(preparedBlockSize, 0.0f);
     scratchRight.assign(preparedBlockSize, 0.0f);
     ampEnvelope.prepare(sampleRate);
+    fastModulation.prepare(sampleRate);
     filters.prepare(sampleRate);
 
     for (auto& slot : slots)
@@ -22,6 +23,7 @@ void Voice::prepare(double newSampleRate, std::uint32_t maxBlockSize)
 void Voice::reset() noexcept
 {
     ampEnvelope.reset();
+    fastModulation.resetPhases();
     filters.reset();
     stopEngines();
     currentNote = -1;
@@ -57,6 +59,12 @@ bool Voice::setEngineParameter(std::size_t slotIndex, tryst::params::Destination
     if (slotIndex >= slots.size())
         return false;
 
+    const tryst::mod::TargetId target { tryst::mod::TargetDomain::generator,
+                                        static_cast<std::uint8_t>(slotIndex),
+                                        destination };
+    if (!fastModulation.setBase(target, normalized))
+        return false;
+
     if (auto* engine = slots[slotIndex].get())
         return engine->setParameter(destination, normalized);
 
@@ -76,12 +84,30 @@ bool Voice::setEngineAsset(std::size_t slotIndex, std::shared_ptr<const EngineAs
 
 bool Voice::setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept
 {
+    const tryst::mod::TargetId target { tryst::mod::TargetDomain::filter, 0, destination };
+    if (!fastModulation.setBase(target, normalized))
+        return false;
     return filters.setParameter(destination, normalized);
 }
 
 void Voice::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
 {
     ampEnvelope.setParameters(parameters);
+}
+
+bool Voice::configureFastLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept
+{
+    return fastModulation.configureLfo(index, rateHz, waveform);
+}
+
+bool Voice::addFastModulationRoute(tryst::mod::Route route) noexcept
+{
+    return fastModulation.addRoute(route);
+}
+
+void Voice::clearFastModulationRoutes() noexcept
+{
+    fastModulation.clearRoutes();
 }
 
 void Voice::start(const NoteEvent& event, std::uint64_t newAge) noexcept
@@ -95,6 +121,7 @@ void Voice::start(const NoteEvent& event, std::uint64_t newAge) noexcept
         }
     }
 
+    fastModulation.resetPhases();
     currentNote = event.note;
     voiceAge = newAge;
     active = true;
@@ -123,23 +150,35 @@ void Voice::render(ProcessContext& context) noexcept
     std::fill_n(scratchLeft.begin(), static_cast<std::ptrdiff_t>(samples), 0.0f);
     std::fill_n(scratchRight.begin(), static_cast<std::ptrdiff_t>(samples), 0.0f);
 
-    ProcessContext voiceContext {
-        context.sampleRate,
-        std::span<float>(scratchLeft.data(), samples),
-        std::span<float>(scratchRight.data(), samples)
-    };
-
-    for (auto& slot : slots)
-        if (auto* engine = slot.get())
-            engine->render(voiceContext);
-
-    filters.process(voiceContext.left, voiceContext.right);
-
-    for (std::size_t i = 0; i < samples; ++i)
+    for (std::size_t offset = 0; offset < samples; offset += tryst::mod::FastModulationRuntime::preferredChunkSize)
     {
-        const auto gain = ampEnvelope.nextSample();
-        context.left[i] += scratchLeft[i] * gain;
-        context.right[i] += scratchRight[i] * gain;
+        const auto chunkSamples = std::min<std::size_t>(
+            tryst::mod::FastModulationRuntime::preferredChunkSize, samples - offset);
+
+        fastModulation.applyCurrent([this](tryst::mod::TargetId target, float normalized) noexcept {
+            applyFastTarget(target, normalized);
+        });
+
+        ProcessContext chunkContext {
+            context.sampleRate,
+            std::span<float>(scratchLeft.data() + offset, chunkSamples),
+            std::span<float>(scratchRight.data() + offset, chunkSamples)
+        };
+
+        for (auto& slot : slots)
+            if (auto* engine = slot.get())
+                engine->render(chunkContext);
+
+        filters.process(chunkContext.left, chunkContext.right);
+
+        for (std::size_t i = 0; i < chunkSamples; ++i)
+        {
+            const auto gain = ampEnvelope.nextSample();
+            context.left[offset + i] += scratchLeft[offset + i] * gain;
+            context.right[offset + i] += scratchRight[offset + i] * gain;
+        }
+
+        fastModulation.advance(static_cast<std::uint32_t>(chunkSamples));
     }
 
     if (!ampEnvelope.isActive())
@@ -149,6 +188,20 @@ void Voice::render(ProcessContext& context) noexcept
         releasing = false;
         currentNote = -1;
     }
+}
+
+void Voice::applyFastTarget(tryst::mod::TargetId target, float normalized) noexcept
+{
+    if (target.domain == tryst::mod::TargetDomain::generator)
+    {
+        if (target.slot < slots.size())
+            if (auto* engine = slots[target.slot].get())
+                (void) engine->setParameter(target.parameter, normalized);
+        return;
+    }
+
+    if (target.domain == tryst::mod::TargetDomain::filter)
+        (void) filters.setParameter(target.parameter, normalized);
 }
 
 void Voice::stopEngines() noexcept
