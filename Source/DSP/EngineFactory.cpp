@@ -29,3 +29,4 @@ std::unique_ptr<Engine> createEngine(EngineKind kind)
 
     return {};
 }
+}
