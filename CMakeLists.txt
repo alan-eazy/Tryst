@@ -39,4 +39,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_core_tests Tests/CoreTests.cpp)
     target_link_libraries(tryst_core_tests PRIVATE tryst_core)
     add_test(NAME tryst_core_tests COMMAND tryst_core_tests)
+
+    add_executable(tryst_granular_tests Tests/GranularTests.cpp)
+    target_link_libraries(tryst_granular_tests PRIVATE tryst_core)
+    add_test(NAME tryst_granular_tests COMMAND tryst_granular_tests)
 endif()
