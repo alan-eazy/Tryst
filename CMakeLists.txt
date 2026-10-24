@@ -54,6 +54,53 @@ else()
     target_compile_options(tryst_plugin_engine PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+option(TRYST_BUILD_PLUGINS "Build Tryst CLAP and VST3 plugin targets" OFF)
+if (TRYST_BUILD_PLUGINS)
+    include(FetchContent)
+
+    set(CLAP_WRAPPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(CLAP_WRAPPER_DOWNLOAD_DEPENDENCIES ON CACHE BOOL "" FORCE)
+    set(CLAP_SUPPORTS_ALL_NOTE_EXPRESSIONS OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        clap_wrapper
+        GIT_REPOSITORY https://github.com/free-audio/clap-wrapper.git
+        GIT_TAG v0.16.0
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(clap_wrapper)
+
+    set_target_properties(tryst_core tryst_plugin_engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    add_library(tryst_clap_impl STATIC
+        Source/Plugin/Clap/TrystClap.cpp
+    )
+    target_include_directories(tryst_clap_impl PUBLIC Source Source/Plugin/Clap)
+    target_link_libraries(tryst_clap_impl PUBLIC tryst_plugin_engine clap clap-wrapper-extensions)
+    target_compile_features(tryst_clap_impl PUBLIC cxx_std_20)
+    target_compile_definitions(tryst_clap_impl PRIVATE TRYST_PLUGIN_VERSION="${PROJECT_VERSION}")
+    set_target_properties(tryst_clap_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    if (MSVC)
+        target_compile_options(tryst_clap_impl PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(tryst_clap_impl PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    make_clapfirst_plugins(
+        TARGET_NAME tryst_formats
+        IMPL_TARGET tryst_clap_impl
+        OUTPUT_NAME "Tryst"
+        ENTRY_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/Source/Plugin/Clap/TrystClapExport.cpp"
+        BUNDLE_IDENTIFIER "com.alan-eazy.tryst"
+        BUNDLE_VERSION ${PROJECT_VERSION}
+        COPY_AFTER_BUILD FALSE
+        WINDOWS_FOLDER_VST3 TRUE
+        PLUGIN_FORMATS CLAP VST3
+        ASSET_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Tryst_assets"
+    )
+endif()
+
 option(TRYST_BUILD_TESTS "Build Tryst DSP tests" ON)
 if (TRYST_BUILD_TESTS)
     enable_testing()
