@@ -61,7 +61,7 @@ struct RouteState
 
 struct PatchState
 {
-    static constexpr std::uint32_t currentSchemaVersion = 2;
+    static constexpr std::uint32_t currentSchemaVersion = 3;
     static constexpr std::uint32_t minimumReadableSchemaVersion = 1;
 
     std::uint32_t schemaVersion = currentSchemaVersion;
@@ -73,6 +73,7 @@ struct PatchState
     std::array<LfoState, 4> lfos {};
     std::array<MsegState, 2> msegs {};
     std::array<StepState, 2> steps {};
+    std::array<float, 128> tuningOffsetsSemitones {};
     std::vector<ParameterState> parameters;
     std::vector<RouteState> routes;
 };

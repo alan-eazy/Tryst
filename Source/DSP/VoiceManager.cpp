@@ -204,10 +204,32 @@ std::size_t VoiceManager::fastModulationRouteCount() const noexcept
     return voices.front().fastModulationRouteCount();
 }
 
+bool VoiceManager::setTuningOffsetSemitones(std::int32_t note, float semitones) noexcept
+{
+    return tuning.setOffsetSemitones(note, semitones);
+}
+
+bool VoiceManager::setOctaveTuning(std::span<const float> offsets) noexcept
+{
+    return tuning.setOctaveOffsets(offsets);
+}
+
+void VoiceManager::resetTuning() noexcept
+{
+    tuning.resetEqualTemperament();
+}
+
+float VoiceManager::tuningOffsetSemitones(std::int32_t note) const noexcept
+{
+    return tuning.offsetSemitones(note);
+}
+
 void VoiceManager::noteOn(const NoteEvent& event) noexcept
 {
+    auto tunedEvent = event;
+    tunedEvent.tuningOffsetSemitones += tuning.offsetSemitones(event.note);
     auto& voice = chooseVoice();
-    voice.start(event, ++ageCounter);
+    voice.start(tunedEvent, ++ageCounter);
 }
 
 void VoiceManager::noteOff(std::int32_t note, float releaseVelocity) noexcept
@@ -215,6 +237,16 @@ void VoiceManager::noteOff(std::int32_t note, float releaseVelocity) noexcept
     for (auto& voice : voices)
         if (voice.matches(note))
             voice.release(note, releaseVelocity);
+}
+
+void VoiceManager::updateNoteExpression(std::int32_t note,
+                                        float pressure,
+                                        float timbre,
+                                        float pitchBendSemitones) noexcept
+{
+    for (auto& voice : voices)
+        if (voice.matches(note))
+            voice.updateExpression(pressure, timbre, pitchBendSemitones);
 }
 
 void VoiceManager::render(ProcessContext& context) noexcept

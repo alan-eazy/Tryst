@@ -23,6 +23,7 @@ struct NoteEvent
     float pressure = 0.0f;
     float timbre = 0.0f;
     float pitchBendSemitones = 0.0f;
+    float tuningOffsetSemitones = 0.0f;
 };
 
 enum class EngineKind
@@ -49,6 +50,7 @@ public:
     virtual void reset() noexcept = 0;
     virtual void noteOn(const NoteEvent& note) noexcept = 0;
     virtual void noteOff(std::int32_t note, float releaseVelocity) noexcept = 0;
+    [[nodiscard]] virtual bool setPitchBendSemitones(float) noexcept { return false; }
     virtual void render(ProcessContext& context) noexcept = 0;
     [[nodiscard]] virtual bool setParameter(tryst::params::DestinationId destination, float normalized) noexcept = 0;
     [[nodiscard]] virtual bool setAsset(std::shared_ptr<const EngineAsset>) noexcept { return false; }

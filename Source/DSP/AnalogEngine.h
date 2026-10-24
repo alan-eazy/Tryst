@@ -15,6 +15,7 @@ public:
     void reset() noexcept override;
     void noteOn(const NoteEvent& note) noexcept override;
     void noteOff(std::int32_t note, float releaseVelocity) noexcept override;
+    [[nodiscard]] bool setPitchBendSemitones(float semitones) noexcept override;
     void render(ProcessContext& context) noexcept override;
     [[nodiscard]] bool setParameter(tryst::params::DestinationId destination, float normalized) noexcept override;
 
@@ -30,6 +31,7 @@ private:
     double sampleRate = 48000.0;
     float phase = 0.0f;
     float frequency = 440.0f;
+    float baseMidiNote = 69.0f;
     float playedMidiNote = 69.0f;
     float velocity = 0.0f;
     float level = 0.65f;

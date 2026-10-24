@@ -22,6 +22,7 @@ public:
     void reset() noexcept override;
     void noteOn(const NoteEvent& note) noexcept override;
     void noteOff(std::int32_t note, float releaseVelocity) noexcept override;
+    [[nodiscard]] bool setPitchBendSemitones(float semitones) noexcept override;
     void render(ProcessContext& context) noexcept override;
     [[nodiscard]] bool setParameter(tryst::params::DestinationId destination, float normalized) noexcept override;
     [[nodiscard]] bool setAsset(std::shared_ptr<const EngineAsset> next) noexcept override;
@@ -52,6 +53,7 @@ private:
     std::array<Grain, maxGrains> grains {};
     double hostSampleRate = 48000.0;
     double spawnCountdown = 0.0;
+    float baseMidiNote = 60.0f;
     float playedMidiNote = 60.0f;
     float detuneSemitones = 0.0f;
     float grainPitchSemitones = 0.0f;

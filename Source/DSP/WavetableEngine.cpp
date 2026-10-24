@@ -24,7 +24,8 @@ void WavetableEngine::reset() noexcept
 
 void WavetableEngine::noteOn(const NoteEvent& note) noexcept
 {
-    playedMidiNote = static_cast<float>(note.note) + note.pitchBendSemitones;
+    baseMidiNote = static_cast<float>(note.note) + note.tuningOffsetSemitones;
+    playedMidiNote = baseMidiNote + note.pitchBendSemitones;
     updateFrequency();
     velocity = std::clamp(note.velocity, 0.0f, 1.0f);
     active = true;
@@ -33,6 +34,13 @@ void WavetableEngine::noteOn(const NoteEvent& note) noexcept
 void WavetableEngine::noteOff(std::int32_t, float) noexcept
 {
     active = false;
+}
+
+bool WavetableEngine::setPitchBendSemitones(float semitones) noexcept
+{
+    playedMidiNote = baseMidiNote + std::clamp(semitones, -48.0f, 48.0f);
+    updateFrequency();
+    return true;
 }
 
 void WavetableEngine::render(ProcessContext& context) noexcept

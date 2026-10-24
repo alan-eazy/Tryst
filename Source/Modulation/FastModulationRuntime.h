@@ -26,6 +26,7 @@ public:
     [[nodiscard]] bool configureLfo(std::size_t index, float rateHz, LfoWaveform waveform) noexcept;
     [[nodiscard]] bool configureMseg(std::size_t index, std::span<const MsegPoint> points, float rateHz, bool loop) noexcept;
     [[nodiscard]] bool configureStep(std::size_t index, std::span<const float> values, float rateHz, bool loop) noexcept;
+    [[nodiscard]] bool setExpressionSource(SourceId source, float value) noexcept;
     [[nodiscard]] bool addRoute(Route route) noexcept;
     void clearRoutes() noexcept;
     [[nodiscard]] bool setBase(TargetId target, float normalized) noexcept;
