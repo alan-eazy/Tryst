@@ -4,6 +4,7 @@
 #include "../Modulation/ModulationRuntime.h"
 #include "../Modulation/TargetValueStore.h"
 #include "../Tuning/TuningTable.h"
+#include "../FX/FxRack.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -23,6 +24,11 @@ public:
     [[nodiscard]] bool setEngineParameter(std::size_t slot, tryst::params::DestinationId destination, float normalized) noexcept;
     [[nodiscard]] bool setEngineAsset(std::size_t slot, std::shared_ptr<const EngineAsset> asset) noexcept;
     [[nodiscard]] bool setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept;
+    [[nodiscard]] bool setEffectKind(std::size_t slot, tryst::fx::EffectKind kind);
+    void clearEffect(std::size_t slot) noexcept;
+    [[nodiscard]] bool swapEffects(std::size_t a, std::size_t b) noexcept;
+    [[nodiscard]] bool setEffectOrder(std::span<const std::uint8_t> slotOrder) noexcept;
+    [[nodiscard]] bool setEffectParameter(std::size_t slot, tryst::params::DestinationId destination, float normalized) noexcept;
     void setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept;
 
     [[nodiscard]] bool addModulationRoute(tryst::mod::Route route) noexcept;
@@ -63,6 +69,7 @@ private:
     tryst::mod::ModulationRuntime modulation;
     tryst::mod::TargetValueStore baseTargets;
     tryst::tuning::TuningTable tuning;
+    tryst::fx::FxRack fxRack;
     std::uint64_t ageCounter = 0;
 };
 }

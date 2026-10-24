@@ -26,6 +26,14 @@ bool PatchApplier::apply(const PatchState& patch, tryst::dsp::VoiceManager& mana
         else
             manager.clearEngine(slot);
     }
+    for (std::size_t slot = 0; slot < patch.effects.size(); ++slot)
+    {
+        if (patch.effects[slot].enabled)
+            success = manager.setEffectKind(slot, patch.effects[slot].kind) && success;
+        else
+            manager.clearEffect(slot);
+    }
+    success = manager.setEffectOrder(patch.effectOrder) && success;
 
     manager.setAmpEnvelope(patch.ampEnvelope);
 
@@ -42,6 +50,8 @@ bool PatchApplier::apply(const PatchState& patch, tryst::dsp::VoiceManager& mana
             success = manager.setEngineParameter(parameter.slot, descriptor->destination, parameter.normalized) && success;
         else if (parameter.domain == tryst::mod::TargetDomain::filter)
             success = manager.setFilterParameter(descriptor->destination, parameter.normalized) && success;
+        else if (parameter.domain == tryst::mod::TargetDomain::effect)
+            success = manager.setEffectParameter(parameter.slot, descriptor->destination, parameter.normalized) && success;
         else
             success = false;
     }

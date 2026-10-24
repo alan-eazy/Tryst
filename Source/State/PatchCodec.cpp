@@ -40,6 +40,25 @@ std::optional<tryst::dsp::EngineKind> parseEngine(std::string_view text)
     return std::nullopt;
 }
 
+std::string_view effectName(tryst::fx::EffectKind kind)
+{
+    using K = tryst::fx::EffectKind;
+    switch (kind)
+    {
+        case K::drive: return "drive";
+        case K::delay: return "delay";
+    }
+    return "drive";
+}
+
+std::optional<tryst::fx::EffectKind> parseEffect(std::string_view text)
+{
+    using K = tryst::fx::EffectKind;
+    if (text == "drive") return K::drive;
+    if (text == "delay") return K::delay;
+    return std::nullopt;
+}
+
 std::string_view domainName(tryst::mod::TargetDomain domain)
 {
     using D = tryst::mod::TargetDomain;
@@ -47,6 +66,7 @@ std::string_view domainName(tryst::mod::TargetDomain domain)
     {
         case D::generator: return "generator";
         case D::filter: return "filter";
+        case D::effect: return "effect";
         case D::global: return "global";
     }
     return "generator";
@@ -57,6 +77,7 @@ std::optional<tryst::mod::TargetDomain> parseDomain(std::string_view text)
     using D = tryst::mod::TargetDomain;
     if (text == "generator") return D::generator;
     if (text == "filter") return D::filter;
+    if (text == "effect") return D::effect;
     if (text == "global") return D::global;
     return std::nullopt;
 }
@@ -151,6 +172,15 @@ std::string PatchCodec::encode(const PatchState& patch)
     for (std::size_t i = 0; i < patch.generators.size(); ++i)
         out << "engine " << i << ' ' << (patch.generators[i].enabled ? 1 : 0) << ' '
             << engineName(patch.generators[i].kind) << '\n';
+
+    for (std::size_t i = 0; i < patch.effects.size(); ++i)
+        out << "effect " << i << ' ' << (patch.effects[i].enabled ? 1 : 0) << ' '
+            << effectName(patch.effects[i].kind) << '\n';
+
+    out << "fx_order";
+    for (const auto slot : patch.effectOrder)
+        out << ' ' << static_cast<unsigned>(slot);
+    out << '\n';
 
     out << "amp " << patch.ampEnvelope.attackSeconds << ' ' << patch.ampEnvelope.decaySeconds << ' '
         << patch.ampEnvelope.sustainLevel << ' ' << patch.ampEnvelope.releaseSeconds << '\n';
@@ -254,6 +284,36 @@ PatchDecodeResult PatchCodec::decode(std::string_view text)
             if (!kind)
                 return failure(lineNumber, "unknown engine kind");
             patch.generators[slot] = { enabled != 0, *kind };
+            continue;
+        }
+        if (command == "effect")
+        {
+            if (sourceVersion < 4)
+                return failure(lineNumber, "effect record not valid before schema 4");
+            std::size_t slot = 0;
+            int enabled = 0;
+            std::string kindText;
+            if (!(row >> slot >> enabled >> kindText) || slot >= patch.effects.size())
+                return failure(lineNumber, "invalid effect record");
+            const auto kind = parseEffect(kindText);
+            if (!kind)
+                return failure(lineNumber, "unknown effect kind");
+            patch.effects[slot] = { enabled != 0, *kind };
+            continue;
+        }
+        if (command == "fx_order")
+        {
+            if (sourceVersion < 4)
+                return failure(lineNumber, "fx_order record not valid before schema 4");
+            std::array<bool, 4> seen {};
+            for (std::size_t i = 0; i < patch.effectOrder.size(); ++i)
+            {
+                unsigned slot = 0;
+                if (!(row >> slot) || slot >= patch.effectOrder.size() || seen[slot])
+                    return failure(lineNumber, "invalid fx_order record");
+                patch.effectOrder[i] = static_cast<std::uint8_t>(slot);
+                seen[slot] = true;
+            }
             continue;
         }
         if (command == "amp")

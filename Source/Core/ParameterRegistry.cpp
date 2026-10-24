@@ -34,6 +34,10 @@ constexpr std::array registry {
     ParameterDescriptor { destination::filter2Mode, "filter.2.mode", "Filter 2 Mode", 0.00f, false },
     ParameterDescriptor { destination::filterRouting, "filter.routing", "Filter Routing", 0.00f, false },
     ParameterDescriptor { destination::filterParallelBlend, "filter.parallel_blend", "Parallel Filter Blend", 0.50f, true },
+    ParameterDescriptor { destination::fxMix, "fx.mix", "FX Mix", 1.00f, false },
+    ParameterDescriptor { destination::fxDriveAmount, "fx.drive.amount", "Drive Amount", 0.25f, false },
+    ParameterDescriptor { destination::fxDelayTime, "fx.delay.time", "Delay Time", 0.20f, false },
+    ParameterDescriptor { destination::fxDelayFeedback, "fx.delay.feedback", "Delay Feedback", 0.25f, false },
 };
 
 consteval bool destinationsAreUnique()
