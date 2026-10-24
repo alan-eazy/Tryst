@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.11.0 LANGUAGES CXX)
+project(Tryst VERSION 0.12.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,6 +28,7 @@ add_library(tryst_core STATIC
     Source/Modulation/StepSequencer.cpp
     Source/State/PatchApplier.cpp
     Source/State/PatchCodec.cpp
+    Source/Tuning/TuningTable.cpp
 )
 
 target_include_directories(tryst_core PUBLIC Source)
@@ -65,4 +66,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_shape_modulator_tests Tests/ShapeModulatorTests.cpp)
     target_link_libraries(tryst_shape_modulator_tests PRIVATE tryst_core)
     add_test(NAME tryst_shape_modulator_tests COMMAND tryst_shape_modulator_tests)
+
+    add_executable(tryst_expression_tuning_tests Tests/ExpressionTuningTests.cpp)
+    target_link_libraries(tryst_expression_tuning_tests PRIVATE tryst_core)
+    add_test(NAME tryst_expression_tuning_tests COMMAND tryst_expression_tuning_tests)
 endif()

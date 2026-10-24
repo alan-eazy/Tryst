@@ -35,6 +35,7 @@ public:
 
     void start(const NoteEvent& event, std::uint64_t newAge) noexcept;
     void release(std::int32_t note, float releaseVelocity) noexcept;
+    void updateExpression(float pressure, float timbre, float pitchBendSemitones) noexcept;
     void render(ProcessContext& context) noexcept;
 
     [[nodiscard]] bool isActive() const noexcept { return active; }

@@ -138,6 +138,12 @@ void Voice::start(const NoteEvent& event, std::uint64_t newAge) noexcept
     }
 
     fastModulation.resetPhases();
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::velocity, 0 }, std::clamp(event.velocity, 0.0f, 1.0f));
+    const auto keyTrack = (std::clamp(static_cast<float>(event.note), 0.0f, 127.0f) / 127.0f) * 2.0f - 1.0f;
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::keyTrack, 0 }, keyTrack);
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::pressure, 0 }, std::clamp(event.pressure, 0.0f, 1.0f));
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::timbre, 0 }, std::clamp(event.timbre, 0.0f, 1.0f));
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::pitchBend, 0 }, std::clamp(event.pitchBendSemitones / 48.0f, -1.0f, 1.0f));
     currentNote = event.note;
     voiceAge = newAge;
     active = true;
@@ -152,6 +158,21 @@ void Voice::release(std::int32_t noteNumber, float) noexcept
 
     ampEnvelope.noteOff();
     releasing = true;
+}
+
+void Voice::updateExpression(float pressure, float timbre, float pitchBendSemitones) noexcept
+{
+    if (!active)
+        return;
+
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::pressure, 0 }, std::clamp(pressure, 0.0f, 1.0f));
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::timbre, 0 }, std::clamp(timbre, 0.0f, 1.0f));
+    const auto bend = std::clamp(pitchBendSemitones, -48.0f, 48.0f);
+    (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::pitchBend, 0 }, bend / 48.0f);
+
+    for (auto& slot : slots)
+        if (auto* engine = slot.get())
+            (void) engine->setPitchBendSemitones(bend);
 }
 
 void Voice::render(ProcessContext& context) noexcept
@@ -231,5 +252,4 @@ void Voice::stopEngines() noexcept
             engine->reset();
         }
     }
-}
 }

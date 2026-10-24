@@ -55,6 +55,23 @@ bool FastModulationRuntime::configureStep(std::size_t index,
     return steps[index].configure(values, rateHz, loop);
 }
 
+bool FastModulationRuntime::setExpressionSource(SourceId source, float value) noexcept
+{
+    switch (source.type)
+    {
+        case SourceType::velocity:
+        case SourceType::keyTrack:
+        case SourceType::pressure:
+        case SourceType::timbre:
+        case SourceType::pitchBend:
+            if (source.index != 0)
+                return false;
+            return sources.set(source, value);
+        default:
+            return false;
+    }
+}
+
 bool FastModulationRuntime::addRoute(Route route) noexcept
 {
     switch (route.source.type)
@@ -69,6 +86,14 @@ bool FastModulationRuntime::addRoute(Route route) noexcept
             break;
         case SourceType::step:
             if (route.source.index >= steps.size())
+                return false;
+            break;
+        case SourceType::velocity:
+        case SourceType::keyTrack:
+        case SourceType::pressure:
+        case SourceType::timbre:
+        case SourceType::pitchBend:
+            if (route.source.index != 0)
                 return false;
             break;
         default:

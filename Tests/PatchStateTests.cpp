@@ -32,6 +32,8 @@ tryst::state::PatchState makePatch()
     patch.steps[0].rateHz = 2.0f;
     patch.steps[0].loop = true;
     patch.steps[0].values = { -1.0f, 0.0f, 1.0f, 0.25f };
+    patch.tuningOffsetsSemitones[60] = 0.37f;
+    patch.tuningOffsetsSemitones[61] = -0.12f;
 
     patch.parameters.push_back({ tryst::mod::TargetDomain::generator, 0, "generator.level", 0.45f });
     patch.parameters.push_back({ tryst::mod::TargetDomain::generator, 0, "engine.analog.shape", 0.20f });
@@ -99,6 +101,7 @@ void testRoundTrip()
     assert(std::abs(decoded.patch->msegs[0].points[1].value - 0.5f) < 0.00001f);
     assert(std::abs(decoded.patch->steps[0].values[2] - 1.0f) < 0.00001f);
     assert(std::abs(decoded.patch->macros[0] - 0.75f) < 0.00001f);
+    assert(std::abs(decoded.patch->tuningOffsetsSemitones[60] - 0.37f) < 0.00001f);
     assert(tryst::state::PatchCodec::encode(*decoded.patch) == encoded);
 }
 
@@ -113,6 +116,7 @@ void testApplyToVoiceManager()
     assert(tryst::state::PatchApplier::apply(*decoded.patch, manager));
     assert(manager.modulationRouteCount() == 1);
     assert(manager.fastModulationRouteCount() == 3);
+    assert(std::abs(manager.tuningOffsetSemitones(60) - 0.37f) < 0.00001f);
 
     manager.noteOn({ 64, 0.9f });
     std::array<float, 128> left {};
@@ -141,7 +145,15 @@ void testDecodeValidation()
     assert(migrated.patch->msegs[0].points.empty());
     assert(migrated.patch->steps[0].values.empty());
     const auto migratedText = tryst::state::PatchCodec::encode(*migrated.patch);
-    assert(migratedText.rfind("TRYST_PATCH 2\n", 0) == 0);
+    assert(migratedText.rfind("TRYST_PATCH 3\n", 0) == 0);
+
+    const auto migratedV2 = tryst::state::PatchCodec::decode("TRYST_PATCH 2\nend\n");
+    assert(migratedV2);
+    assert(migratedV2.patch->schemaVersion == tryst::state::PatchState::currentSchemaVersion);
+    assert(std::abs(migratedV2.patch->tuningOffsetsSemitones[60]) < 0.00001f);
+
+    const auto badTuning = tryst::state::PatchCodec::decode("TRYST_PATCH 3\ntuning 60 50\nend\n");
+    assert(!badTuning);
 
     const auto badMseg = tryst::state::PatchCodec::decode(
         "TRYST_PATCH 2\nmseg 0 1 1 2 0 0 0.5 1\nend\n");

@@ -26,7 +26,8 @@ void GranularEngine::reset() noexcept
 
 void GranularEngine::noteOn(const NoteEvent& note) noexcept
 {
-    playedMidiNote = static_cast<float>(note.note) + note.pitchBendSemitones;
+    baseMidiNote = static_cast<float>(note.note) + note.tuningOffsetSemitones;
+    playedMidiNote = baseMidiNote + note.pitchBendSemitones;
     velocity = std::clamp(note.velocity, 0.0f, 1.0f);
     randomState ^= static_cast<std::uint32_t>(note.note + 1) * 0x9e3779b9u;
     clearGrains();
@@ -38,6 +39,17 @@ void GranularEngine::noteOff(std::int32_t, float) noexcept
 {
     // Voice-level amplitude envelopes own release timing. Existing grains and
     // newly scheduled grains continue until the voice envelope finishes.
+}
+
+bool GranularEngine::setPitchBendSemitones(float semitones) noexcept
+{
+    const auto previous = playedMidiNote;
+    playedMidiNote = baseMidiNote + std::clamp(semitones, -48.0f, 48.0f);
+    const auto ratio = std::pow(2.0, static_cast<double>(playedMidiNote - previous) / 12.0);
+    for (auto& grain : grains)
+        if (grain.active)
+            grain.increment *= ratio;
+    return true;
 }
 
 void GranularEngine::render(ProcessContext& context) noexcept
@@ -190,6 +202,7 @@ double GranularEngine::grainIncrement() const noexcept
 
 double GranularEngine::grainSizeSeconds() const noexcept
 {
+    // 10 ms .. 500 ms, with more useful resolution in the short-grain range.
     const auto shaped = static_cast<double>(sizeNormalized) * static_cast<double>(sizeNormalized);
     return 0.010 + shaped * 0.490;
 }
@@ -247,5 +260,4 @@ void GranularEngine::clearGrains() noexcept
 {
     for (auto& grain : grains)
         grain = {};
-}
 }

@@ -1,6 +1,7 @@
 #include "PatchApplier.h"
 #include "Core/ParameterRegistry.h"
 #include <algorithm>
+#include <cmath>
 
 namespace tryst::state
 {
@@ -12,8 +13,12 @@ bool PatchApplier::apply(const PatchState& patch, tryst::dsp::VoiceManager& mana
     manager.reset();
     manager.clearModulationRoutes();
     manager.clearFastModulationRoutes();
+    manager.resetTuning();
 
     bool success = true;
+    for (std::size_t note = 0; note < patch.tuningOffsetsSemitones.size(); ++note)
+        if (std::abs(patch.tuningOffsetsSemitones[note]) > 0.0000001f)
+            success = manager.setTuningOffsetSemitones(static_cast<std::int32_t>(note), patch.tuningOffsetsSemitones[note]) && success;
     for (std::size_t slot = 0; slot < patch.generators.size(); ++slot)
     {
         if (patch.generators[slot].enabled)

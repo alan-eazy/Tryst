@@ -184,6 +184,10 @@ std::string PatchCodec::encode(const PatchState& patch)
         out << '\n';
     }
 
+    for (std::size_t note = 0; note < patch.tuningOffsetsSemitones.size(); ++note)
+        if (std::abs(patch.tuningOffsetsSemitones[note]) > 0.0000001f)
+            out << "tuning " << note << ' ' << patch.tuningOffsetsSemitones[note] << '\n';
+
     for (const auto& parameter : patch.parameters)
         out << "param " << domainName(parameter.domain) << ' ' << static_cast<unsigned>(parameter.slot) << ' '
             << parameter.parameterId << ' ' << parameter.normalized << '\n';
@@ -346,6 +350,18 @@ PatchDecodeResult PatchCodec::decode(std::string_view text)
                 state.values.push_back(value);
             }
             patch.steps[index] = std::move(state);
+            continue;
+        }
+        if (command == "tuning")
+        {
+            if (sourceVersion < 3)
+                return failure(lineNumber, "tuning record not valid before schema 3");
+            std::size_t note = 0;
+            float offset = 0.0f;
+            if (!(row >> note >> offset) || note >= patch.tuningOffsetsSemitones.size()
+                || !std::isfinite(offset) || offset < -48.0f || offset > 48.0f)
+                return failure(lineNumber, "invalid tuning record");
+            patch.tuningOffsetsSemitones[note] = offset;
             continue;
         }
         if (command == "param")

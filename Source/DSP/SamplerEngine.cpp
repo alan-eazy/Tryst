@@ -25,7 +25,8 @@ void SamplerEngine::reset() noexcept
 
 void SamplerEngine::noteOn(const NoteEvent& note) noexcept
 {
-    playedMidiNote = static_cast<float>(note.note) + note.pitchBendSemitones;
+    baseMidiNote = static_cast<float>(note.note) + note.tuningOffsetSemitones;
+    playedMidiNote = baseMidiNote + note.pitchBendSemitones;
     velocity = std::clamp(note.velocity, 0.0f, 1.0f);
     updateIncrement();
     playhead = reverse ? regionEndFrame() : regionStartFrame();
@@ -36,6 +37,13 @@ void SamplerEngine::noteOff(std::int32_t, float) noexcept
 {
     // Voice-level amplitude envelopes own release timing. The sample keeps running
     // until that envelope finishes and the voice resets the engine.
+}
+
+bool SamplerEngine::setPitchBendSemitones(float semitones) noexcept
+{
+    playedMidiNote = baseMidiNote + std::clamp(semitones, -48.0f, 48.0f);
+    updateIncrement();
+    return true;
 }
 
 void SamplerEngine::render(ProcessContext& context) noexcept

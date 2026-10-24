@@ -3,6 +3,7 @@
 #include "Voice.h"
 #include "../Modulation/ModulationRuntime.h"
 #include "../Modulation/TargetValueStore.h"
+#include "../Tuning/TuningTable.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -38,8 +39,14 @@ public:
     void clearFastModulationRoutes() noexcept;
     [[nodiscard]] std::size_t fastModulationRouteCount() const noexcept;
 
+    [[nodiscard]] bool setTuningOffsetSemitones(std::int32_t note, float semitones) noexcept;
+    [[nodiscard]] bool setOctaveTuning(std::span<const float> offsets) noexcept;
+    void resetTuning() noexcept;
+    [[nodiscard]] float tuningOffsetSemitones(std::int32_t note) const noexcept;
+
     void noteOn(const NoteEvent& event) noexcept;
     void noteOff(std::int32_t note, float releaseVelocity = 0.0f) noexcept;
+    void updateNoteExpression(std::int32_t note, float pressure, float timbre, float pitchBendSemitones) noexcept;
     void render(ProcessContext& context) noexcept;
 
     [[nodiscard]] std::size_t activeVoiceCount() const noexcept;
@@ -55,6 +62,7 @@ private:
     std::array<Voice, maxVoices> voices;
     tryst::mod::ModulationRuntime modulation;
     tryst::mod::TargetValueStore baseTargets;
+    tryst::tuning::TuningTable tuning;
     std::uint64_t ageCounter = 0;
 };
 }
