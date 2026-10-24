@@ -27,6 +27,8 @@ public:
     [[nodiscard]] bool setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept;
     void setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept;
     [[nodiscard]] bool configureFastLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept;
+    [[nodiscard]] bool configureFastMseg(std::size_t index, std::span<const tryst::mod::MsegPoint> points, float rateHz, bool loop) noexcept;
+    [[nodiscard]] bool configureFastStep(std::size_t index, std::span<const float> values, float rateHz, bool loop) noexcept;
     [[nodiscard]] bool addFastModulationRoute(tryst::mod::Route route) noexcept;
     void clearFastModulationRoutes() noexcept;
     [[nodiscard]] std::size_t fastModulationRouteCount() const noexcept { return fastModulation.routeCount(); }
