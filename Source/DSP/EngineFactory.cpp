@@ -2,6 +2,7 @@
 #include "AnalogEngine.h"
 #include "WavetableEngine.h"
 #include "SamplerEngine.h"
+#include "GranularEngine.h"
 
 namespace tryst::dsp
 {
@@ -16,6 +17,7 @@ std::unique_ptr<Engine> createEngine(EngineKind kind)
         case EngineKind::sampler:
             return std::make_unique<SamplerEngine>();
         case EngineKind::granular:
+            return std::make_unique<GranularEngine>();
         case EngineKind::spectral:
         case EngineKind::additive:
         case EngineKind::physicalModel:

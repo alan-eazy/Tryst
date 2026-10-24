@@ -33,6 +33,10 @@ Heavy engine data derives from `EngineAsset` and is published to voices as immut
 
 `SampleData` stores immutable mono or stereo sample frames plus source sample rate and root MIDI note. `SamplerEngine` compensates source/host sample-rate differences, pitch-tracks notes relative to the root note, uses linear interpolation, and exposes normalized start/end, loop start/end, loop enable and reverse parameters through the same destination registry as the other engines. The current core is intentionally single-sample-per-slot; multisample key/velocity mapping and file decoding remain asset-layer work rather than audio-thread responsibilities.
 
+### 1.5 Granular playback
+
+`GranularEngine` consumes the same immutable `SampleData` assets as the sampler. Each engine instance owns a fixed pool of 32 grains, so scheduling and rendering require no heap allocation. Grain position, size, density, spray and pitch are exposed as stable normalized destinations, while note pitch and common generator tune are combined with the sample root note and source sample rate. Grains use linear source interpolation and a Hann window; deterministic voice-local pseudo-random spray avoids shared RNG state on the audio thread. The current implementation is a bounded real-time cloud engine rather than an offline time-stretcher; stereo spread, freeze modes and richer grain-window choices remain future extensions.
+
 ## 2. Modulation
 
 The modulation matrix is central infrastructure. Engines and effects expose destinations through stable destination IDs; LFOs, envelopes, MSEGs, random sources, macros and expressive controls provide sources.
