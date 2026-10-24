@@ -34,15 +34,21 @@ public:
     [[nodiscard]] std::size_t fastModulationRouteCount() const noexcept { return fastModulation.routeCount(); }
 
     void start(const NoteEvent& event, std::uint64_t newAge) noexcept;
-    void release(std::int32_t note, float releaseVelocity) noexcept;
+    void release(std::int32_t note, float releaseVelocity, std::int32_t noteId = -1) noexcept;
     void updateExpression(float pressure, float timbre, float pitchBendSemitones) noexcept;
     void render(ProcessContext& context) noexcept;
 
     [[nodiscard]] bool isActive() const noexcept { return active; }
     [[nodiscard]] bool isReleasing() const noexcept { return releasing; }
-    [[nodiscard]] bool matches(std::int32_t note) const noexcept { return active && currentNote == note; }
+    [[nodiscard]] bool matches(std::int32_t note, std::int32_t noteId = -1) const noexcept
+    {
+        if (!active)
+            return false;
+        return noteId >= 0 ? currentNoteId == noteId : currentNote == note;
+    }
     [[nodiscard]] std::uint64_t age() const noexcept { return voiceAge; }
     [[nodiscard]] std::int32_t note() const noexcept { return currentNote; }
+    [[nodiscard]] std::int32_t noteId() const noexcept { return currentNoteId; }
 
 private:
     void stopEngines() noexcept;
@@ -57,6 +63,7 @@ private:
     double sampleRate = 48000.0;
     std::uint32_t preparedBlockSize = 0;
     std::int32_t currentNote = -1;
+    std::int32_t currentNoteId = -1;
     std::uint64_t voiceAge = 0;
     bool active = false;
     bool releasing = false;

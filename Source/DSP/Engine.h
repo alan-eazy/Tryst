@@ -24,6 +24,7 @@ struct NoteEvent
     float timbre = 0.0f;
     float pitchBendSemitones = 0.0f;
     float tuningOffsetSemitones = 0.0f;
+    std::int32_t noteId = -1;
 };
 
 enum class EngineKind

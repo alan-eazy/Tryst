@@ -27,6 +27,7 @@ void Voice::reset() noexcept
     filters.reset();
     stopEngines();
     currentNote = -1;
+    currentNoteId = -1;
     voiceAge = 0;
     active = false;
     releasing = false;
@@ -95,6 +96,7 @@ void Voice::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noex
     ampEnvelope.setParameters(parameters);
 }
 
+
 bool Voice::configureFastLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept
 {
     return fastModulation.configureLfo(index, rateHz, waveform);
@@ -145,15 +147,16 @@ void Voice::start(const NoteEvent& event, std::uint64_t newAge) noexcept
     (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::timbre, 0 }, std::clamp(event.timbre, 0.0f, 1.0f));
     (void) fastModulation.setExpressionSource({ tryst::mod::SourceType::pitchBend, 0 }, std::clamp(event.pitchBendSemitones / 48.0f, -1.0f, 1.0f));
     currentNote = event.note;
+    currentNoteId = event.noteId;
     voiceAge = newAge;
     active = true;
     releasing = false;
     ampEnvelope.noteOn();
 }
 
-void Voice::release(std::int32_t noteNumber, float) noexcept
+void Voice::release(std::int32_t noteNumber, float, std::int32_t noteId) noexcept
 {
-    if (!matches(noteNumber))
+    if (!matches(noteNumber, noteId))
         return;
 
     ampEnvelope.noteOff();
@@ -224,6 +227,7 @@ void Voice::render(ProcessContext& context) noexcept
         active = false;
         releasing = false;
         currentNote = -1;
+        currentNoteId = -1;
     }
 }
 

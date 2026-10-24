@@ -191,6 +191,7 @@ bool VoiceManager::setModulationSource(tryst::mod::SourceId source, float value)
     return true;
 }
 
+
 bool VoiceManager::configureVoiceLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept
 {
     bool success = true;
@@ -284,20 +285,21 @@ void VoiceManager::noteOn(const NoteEvent& event) noexcept
     voice.start(tunedEvent, ++ageCounter);
 }
 
-void VoiceManager::noteOff(std::int32_t note, float releaseVelocity) noexcept
+void VoiceManager::noteOff(std::int32_t note, float releaseVelocity, std::int32_t noteId) noexcept
 {
     for (auto& voice : voices)
-        if (voice.matches(note))
-            voice.release(note, releaseVelocity);
+        if (voice.matches(note, noteId))
+            voice.release(note, releaseVelocity, noteId);
 }
 
 void VoiceManager::updateNoteExpression(std::int32_t note,
                                         float pressure,
                                         float timbre,
-                                        float pitchBendSemitones) noexcept
+                                        float pitchBendSemitones,
+                                        std::int32_t noteId) noexcept
 {
     for (auto& voice : voices)
-        if (voice.matches(note))
+        if (voice.matches(note, noteId))
             voice.updateExpression(pressure, timbre, pitchBendSemitones);
 }
 

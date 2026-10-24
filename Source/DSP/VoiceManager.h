@@ -51,8 +51,9 @@ public:
     [[nodiscard]] float tuningOffsetSemitones(std::int32_t note) const noexcept;
 
     void noteOn(const NoteEvent& event) noexcept;
-    void noteOff(std::int32_t note, float releaseVelocity = 0.0f) noexcept;
-    void updateNoteExpression(std::int32_t note, float pressure, float timbre, float pitchBendSemitones) noexcept;
+    void noteOff(std::int32_t note, float releaseVelocity = 0.0f, std::int32_t noteId = -1) noexcept;
+    void updateNoteExpression(std::int32_t note, float pressure, float timbre, float pitchBendSemitones,
+                              std::int32_t noteId = -1) noexcept;
     void render(ProcessContext& context) noexcept;
 
     [[nodiscard]] std::size_t activeVoiceCount() const noexcept;

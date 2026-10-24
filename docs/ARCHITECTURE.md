@@ -133,3 +133,11 @@ The audio thread must avoid:
 - Unbounded loops
 
 Expensive asset analysis (sample slicing, spectral analysis, wavetable extraction) belongs on worker threads and publishes immutable data to DSP voices.
+
+## 7. Host-neutral plugin engine
+
+`PluginEngine` is the boundary between plugin APIs and the Tryst DSP core. It owns a `VoiceManager`, a fixed host-parameter catalog and the current patch topology. Hosts deliver sample-offset events (`noteOn`, `noteOff`, per-note expression and parameter automation); `PluginEngine::process()` splits the block at event boundaries so note and parameter changes are sample-accurate without requiring the DSP core to depend on CLAP or VST3 headers.
+
+Host parameter IDs are stable FNV-1a hashes of persistent strings such as `generator.1.generator.level`, `effect.1.fx.drive.amount` and `performance.macro.1`. Runtime values live in a fixed vector allocated at construction. Audio-thread automation only updates that preallocated storage and the DSP target; serialization is assembled later on the state/control thread, avoiding `PatchState` vector growth during processing.
+
+The event model carries both MIDI key and an independent note ID. This lets overlapping notes on the same key receive distinct note-off and expression updates when a host provides CLAP/VST3/MPE note identity. The wrapper layer will translate native host events into these neutral events.
