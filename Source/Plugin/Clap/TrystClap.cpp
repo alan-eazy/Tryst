@@ -2,9 +2,13 @@
 #include <clapwrapper/vst3.h>
 #include "Plugin/PluginEngine.h"
 #include "TrystClapEntry.h"
+#if defined(TRYST_HAS_COCOA_GUI)
+#include "TrystCocoaEditor.h"
+#endif
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cerrno>
 #include <cmath>
 #include <cstdint>
@@ -30,6 +34,24 @@ using tryst::plugin::PluginEngine;
 constexpr std::size_t maxTrackedNotes = 16;
 constexpr std::size_t maxTranslatedEvents = 2048;
 constexpr std::size_t maxStateBytes = 8u * 1024u * 1024u;
+
+#if defined(TRYST_HAS_COCOA_GUI)
+constexpr std::uint32_t guiEventQueueCapacity = 1024;
+
+enum class GuiParamEventKind : std::uint8_t
+{
+    gestureBegin,
+    value,
+    gestureEnd
+};
+
+struct GuiParamEvent
+{
+    GuiParamEventKind kind = GuiParamEventKind::value;
+    std::uint32_t parameterId = 0;
+    float normalized = 0.0f;
+};
+#endif
 
 const char* const pluginFeatures[] = {
     CLAP_PLUGIN_FEATURE_INSTRUMENT,
@@ -83,6 +105,12 @@ struct TrystClapPlugin
     bool processing = false;
     bool hasPendingState = false;
     std::string pendingState;
+#if defined(TRYST_HAS_COCOA_GUI)
+    tryst::plugin::cocoa::Editor* editor = nullptr;
+    std::array<GuiParamEvent, guiEventQueueCapacity> guiEvents {};
+    std::atomic<std::uint32_t> guiEventRead { 0 };
+    std::atomic<std::uint32_t> guiEventWrite { 0 };
+#endif
 };
 
 TrystClapPlugin* self(const clap_plugin_t* plugin) noexcept
@@ -151,6 +179,140 @@ bool appendHostEvent(TrystClapPlugin& plug, HostEvent event) noexcept
     plug.translatedEvents[plug.translatedEventCount++] = event;
     return true;
 }
+
+#if defined(TRYST_HAS_COCOA_GUI)
+bool enqueueGuiParameterChange(TrystClapPlugin& plug,
+                               std::uint32_t parameterId,
+                               float normalized) noexcept
+{
+    const auto read = plug.guiEventRead.load(std::memory_order_acquire);
+    auto write = plug.guiEventWrite.load(std::memory_order_relaxed);
+    const auto used = write >= read
+        ? write - read
+        : guiEventQueueCapacity - (read - write);
+    const auto freeSlots = guiEventQueueCapacity - 1u - used;
+    if (freeSlots < 3u)
+        return false;
+
+    const std::array events {
+        GuiParamEvent { GuiParamEventKind::gestureBegin, parameterId, normalized },
+        GuiParamEvent { GuiParamEventKind::value, parameterId, normalized },
+        GuiParamEvent { GuiParamEventKind::gestureEnd, parameterId, normalized }
+    };
+
+    for (const auto& event : events)
+    {
+        plug.guiEvents[write] = event;
+        write = (write + 1u) % guiEventQueueCapacity;
+    }
+    plug.guiEventWrite.store(write, std::memory_order_release);
+    return true;
+}
+
+bool popGuiEvent(TrystClapPlugin& plug, GuiParamEvent& event) noexcept
+{
+    auto read = plug.guiEventRead.load(std::memory_order_relaxed);
+    const auto write = plug.guiEventWrite.load(std::memory_order_acquire);
+    if (read == write)
+        return false;
+
+    event = plug.guiEvents[read];
+    read = (read + 1u) % guiEventQueueCapacity;
+    plug.guiEventRead.store(read, std::memory_order_release);
+    return true;
+}
+
+void requestGuiParameterFlush(TrystClapPlugin& plug) noexcept
+{
+    if (plug.hostParams != nullptr && plug.hostParams->request_flush != nullptr)
+        plug.hostParams->request_flush(plug.host);
+    else if (plug.host != nullptr && plug.host->request_process != nullptr)
+        plug.host->request_process(plug.host);
+}
+
+void guiParameterChanged(void* context,
+                         std::uint32_t parameterId,
+                         float normalized) noexcept
+{
+    auto* plug = static_cast<TrystClapPlugin*>(context);
+    if (plug == nullptr || plug->engine.parameterCatalog().find(parameterId) == nullptr)
+        return;
+
+    if (enqueueGuiParameterChange(*plug, parameterId, clamp01(normalized)))
+        requestGuiParameterFlush(*plug);
+}
+
+void emitGuiEventToHost(const clap_output_events_t* output,
+                        const GuiParamEvent& event,
+                        std::uint32_t frame) noexcept
+{
+    if (output == nullptr || output->try_push == nullptr)
+        return;
+
+    if (event.kind == GuiParamEventKind::value)
+    {
+        clap_event_param_value_t parameter {};
+        parameter.header.size = sizeof(parameter);
+        parameter.header.time = frame;
+        parameter.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+        parameter.header.type = CLAP_EVENT_PARAM_VALUE;
+        parameter.header.flags = 0;
+        parameter.param_id = event.parameterId;
+        parameter.cookie = nullptr;
+        parameter.note_id = -1;
+        parameter.port_index = -1;
+        parameter.channel = -1;
+        parameter.key = -1;
+        parameter.value = event.normalized;
+        (void) output->try_push(output, &parameter.header);
+        return;
+    }
+
+    clap_event_param_gesture_t gesture {};
+    gesture.header.size = sizeof(gesture);
+    gesture.header.time = frame;
+    gesture.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+    gesture.header.type = event.kind == GuiParamEventKind::gestureBegin
+        ? CLAP_EVENT_PARAM_GESTURE_BEGIN
+        : CLAP_EVENT_PARAM_GESTURE_END;
+    gesture.header.flags = 0;
+    gesture.param_id = event.parameterId;
+    (void) output->try_push(output, &gesture.header);
+}
+
+bool drainGuiEventsForProcess(TrystClapPlugin& plug,
+                              const clap_output_events_t* output) noexcept
+{
+    GuiParamEvent event;
+    while (popGuiEvent(plug, event))
+    {
+        emitGuiEventToHost(output, event, 0);
+        if (event.kind != GuiParamEventKind::value)
+            continue;
+
+        HostEvent translated;
+        translated.frame = 0;
+        translated.type = HostEventType::parameter;
+        translated.parameterId = event.parameterId;
+        translated.normalizedValue = event.normalized;
+        if (!appendHostEvent(plug, translated))
+            return false;
+    }
+    return true;
+}
+
+void drainGuiEventsForFlush(TrystClapPlugin& plug,
+                            const clap_output_events_t* output) noexcept
+{
+    GuiParamEvent event;
+    while (popGuiEvent(plug, event))
+    {
+        emitGuiEventToHost(output, event, 0);
+        if (event.kind == GuiParamEventKind::value)
+            (void) plug.engine.setHostParameter(event.parameterId, event.normalized);
+    }
+}
+#endif
 
 bool appendExpressionEvent(TrystClapPlugin& plug, const ActiveNote& note, std::uint32_t frame) noexcept
 {
@@ -262,7 +424,6 @@ bool translateParameter(TrystClapPlugin& plug, const clap_event_param_value_t& e
 
 bool translateEvents(TrystClapPlugin& plug, const clap_input_events_t* input, std::uint32_t frames) noexcept
 {
-    plug.translatedEventCount = 0;
     if (input == nullptr)
         return true;
 
@@ -348,6 +509,9 @@ bool applyState(TrystClapPlugin& plug, std::string_view text)
     if (!plug.engine.loadState(text))
         return false;
     notifyParameterValuesChanged(plug);
+#if defined(TRYST_HAS_COCOA_GUI)
+    tryst::plugin::cocoa::refresh(plug.editor);
+#endif
     return true;
 }
 
@@ -361,7 +525,12 @@ bool pluginInit(const clap_plugin_t* plugin)
 
 void pluginDestroy(const clap_plugin_t* plugin)
 {
-    delete self(plugin);
+    auto* plug = self(plugin);
+#if defined(TRYST_HAS_COCOA_GUI)
+    tryst::plugin::cocoa::destroyEditor(plug->editor);
+    plug->editor = nullptr;
+#endif
+    delete plug;
 }
 
 bool pluginActivate(const clap_plugin_t* plugin,
@@ -406,6 +575,9 @@ void pluginDeactivate(const clap_plugin_t* plugin)
             notifyParameterValuesChanged(plug);
         plug.pendingState.clear();
         plug.hasPendingState = false;
+#if defined(TRYST_HAS_COCOA_GUI)
+        tryst::plugin::cocoa::refresh(plug.editor);
+#endif
     }
 }
 
@@ -441,6 +613,11 @@ clap_process_status pluginProcess(const clap_plugin_t* plugin, const clap_proces
     if (output.channel_count < 2 || output.data32 == nullptr || output.data32[0] == nullptr || output.data32[1] == nullptr)
         return CLAP_PROCESS_ERROR;
 
+    plug.translatedEventCount = 0;
+#if defined(TRYST_HAS_COCOA_GUI)
+    if (!drainGuiEventsForProcess(plug, process->out_events))
+        return CLAP_PROCESS_ERROR;
+#endif
     if (!translateEvents(plug, process->in_events, process->frames_count))
         return CLAP_PROCESS_ERROR;
 
@@ -578,9 +755,16 @@ bool paramsTextToValue(const clap_plugin_t* plugin, clap_id paramId, const char*
     return true;
 }
 
-void paramsFlush(const clap_plugin_t* plugin, const clap_input_events_t* input, const clap_output_events_t*)
+void paramsFlush(const clap_plugin_t* plugin,
+                 const clap_input_events_t* input,
+                 const clap_output_events_t* output)
 {
     auto& plug = *self(plugin);
+#if defined(TRYST_HAS_COCOA_GUI)
+    drainGuiEventsForFlush(plug, output);
+#else
+    (void)output;
+#endif
     if (input == nullptr)
         return;
     const auto count = input->size(input);
@@ -633,6 +817,121 @@ const clap_plugin_state_t stateExtension {
     stateLoad
 };
 
+#if defined(TRYST_HAS_COCOA_GUI)
+bool guiIsApiSupported(const clap_plugin_t*, const char* api, bool isFloating)
+{
+    return !isFloating && api != nullptr && std::strcmp(api, CLAP_WINDOW_API_COCOA) == 0;
+}
+
+bool guiGetPreferredApi(const clap_plugin_t*, const char** api, bool* isFloating)
+{
+    if (api == nullptr || isFloating == nullptr)
+        return false;
+    *api = CLAP_WINDOW_API_COCOA;
+    *isFloating = false;
+    return true;
+}
+
+bool guiCreate(const clap_plugin_t* plugin, const char* api, bool isFloating)
+{
+    auto& plug = *self(plugin);
+    if (plug.editor != nullptr || !guiIsApiSupported(plugin, api, isFloating))
+        return false;
+    plug.editor = tryst::plugin::cocoa::createEditor(plug.engine, &plug, guiParameterChanged);
+    return plug.editor != nullptr;
+}
+
+void guiDestroy(const clap_plugin_t* plugin)
+{
+    auto& plug = *self(plugin);
+    tryst::plugin::cocoa::destroyEditor(plug.editor);
+    plug.editor = nullptr;
+}
+
+bool guiSetScale(const clap_plugin_t*, double)
+{
+    // Cocoa uses logical points and the OS owns backing-scale conversion.
+    return false;
+}
+
+bool guiGetSize(const clap_plugin_t* plugin, std::uint32_t* width, std::uint32_t* height)
+{
+    if (self(plugin)->editor == nullptr || width == nullptr || height == nullptr)
+        return false;
+    *width = tryst::plugin::cocoa::editorWidth;
+    *height = tryst::plugin::cocoa::editorHeight;
+    return true;
+}
+
+bool guiCanResize(const clap_plugin_t*)
+{
+    return false;
+}
+
+bool guiGetResizeHints(const clap_plugin_t*, clap_gui_resize_hints_t*)
+{
+    return false;
+}
+
+bool guiAdjustSize(const clap_plugin_t*, std::uint32_t* width, std::uint32_t* height)
+{
+    if (width == nullptr || height == nullptr)
+        return false;
+    *width = tryst::plugin::cocoa::editorWidth;
+    *height = tryst::plugin::cocoa::editorHeight;
+    return true;
+}
+
+bool guiSetSize(const clap_plugin_t*, std::uint32_t width, std::uint32_t height)
+{
+    return width == tryst::plugin::cocoa::editorWidth
+        && height == tryst::plugin::cocoa::editorHeight;
+}
+
+bool guiSetParent(const clap_plugin_t* plugin, const clap_window_t* window)
+{
+    if (window == nullptr || window->api == nullptr || window->cocoa == nullptr
+        || std::strcmp(window->api, CLAP_WINDOW_API_COCOA) != 0)
+        return false;
+    return tryst::plugin::cocoa::setParent(self(plugin)->editor, window->cocoa);
+}
+
+bool guiSetTransient(const clap_plugin_t*, const clap_window_t*)
+{
+    return false;
+}
+
+void guiSuggestTitle(const clap_plugin_t*, const char*) {}
+
+bool guiShow(const clap_plugin_t* plugin)
+{
+    return tryst::plugin::cocoa::show(self(plugin)->editor);
+}
+
+bool guiHide(const clap_plugin_t* plugin)
+{
+    return tryst::plugin::cocoa::hide(self(plugin)->editor);
+}
+
+const clap_plugin_gui_t guiExtension {
+    guiIsApiSupported,
+    guiGetPreferredApi,
+    guiCreate,
+    guiDestroy,
+    guiSetScale,
+    guiGetSize,
+    guiCanResize,
+    guiGetResizeHints,
+    guiAdjustSize,
+    guiSetSize,
+    guiSetParent,
+    guiSetTransient,
+    guiSuggestTitle,
+    guiShow,
+    guiHide
+};
+#endif
+
 std::uint32_t vst3MidiChannels(const clap_plugin_t*, std::uint32_t)
 {
     return 16;
@@ -662,6 +961,10 @@ const void* pluginGetExtension(const clap_plugin_t*, const char* id)
         return &paramsExtension;
     if (std::strcmp(id, CLAP_EXT_STATE) == 0)
         return &stateExtension;
+#if defined(TRYST_HAS_COCOA_GUI)
+    if (std::strcmp(id, CLAP_EXT_GUI) == 0)
+        return &guiExtension;
+#endif
     if (std::strcmp(id, CLAP_PLUGIN_AS_VST3) == 0)
         return &vst3PluginExtension;
     return nullptr;
