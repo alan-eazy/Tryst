@@ -3,11 +3,12 @@
 #include "DSP/VoiceManager.h"
 #include "HostParameterCatalog.h"
 #include "State/PatchState.h"
+#include <atomic>
 #include <cstdint>
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace tryst::plugin
 {
@@ -31,6 +32,54 @@ struct HostEvent
     float pitchBendSemitones = 0.0f;
     std::uint32_t parameterId = 0;
     float normalizedValue = 0.0f;
+};
+
+class AtomicFloatStore
+{
+public:
+    class Reference
+    {
+    public:
+        explicit Reference(std::atomic<float>* value) noexcept : storage(value) {}
+        Reference& operator=(float value) noexcept
+        {
+            storage->store(value, std::memory_order_relaxed);
+            return *this;
+        }
+        operator float() const noexcept
+        {
+            return storage->load(std::memory_order_relaxed);
+        }
+
+    private:
+        std::atomic<float>* storage = nullptr;
+    };
+
+    void reserve(std::size_t capacity)
+    {
+        storage = std::make_unique<std::atomic<float>[]>(capacity);
+        capacityCount = capacity;
+        valueCount = 0;
+    }
+
+    void push_back(float value) noexcept
+    {
+        if (valueCount >= capacityCount)
+            return;
+        storage[valueCount++].store(value, std::memory_order_relaxed);
+    }
+
+    [[nodiscard]] std::size_t size() const noexcept { return valueCount; }
+    [[nodiscard]] Reference operator[](std::size_t index) noexcept { return Reference(&storage[index]); }
+    [[nodiscard]] float operator[](std::size_t index) const noexcept
+    {
+        return storage[index].load(std::memory_order_relaxed);
+    }
+
+private:
+    std::unique_ptr<std::atomic<float>[]> storage;
+    std::size_t capacityCount = 0;
+    std::size_t valueCount = 0;
 };
 
 class PluginEngine
@@ -76,7 +125,7 @@ private:
                      std::size_t offset, std::size_t count) noexcept;
 
     HostParameterCatalog catalog;
-    std::vector<float> hostValues;
+    AtomicFloatStore hostValues;
     tryst::state::PatchState patch;
     tryst::dsp::VoiceManager manager;
     double preparedSampleRate = 48000.0;
