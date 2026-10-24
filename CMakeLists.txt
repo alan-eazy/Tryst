@@ -4,6 +4,7 @@ project(Tryst VERSION 0.14.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_library(tryst_core STATIC
     Source/Core/ParameterRegistry.cpp
@@ -70,8 +71,6 @@ if (TRYST_BUILD_PLUGINS)
     )
     FetchContent_MakeAvailable(clap_wrapper)
 
-    set_target_properties(tryst_core tryst_plugin_engine PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
     add_library(tryst_clap_impl STATIC
         Source/Plugin/Clap/TrystClap.cpp
     )
@@ -79,7 +78,6 @@ if (TRYST_BUILD_PLUGINS)
     target_link_libraries(tryst_clap_impl PUBLIC tryst_plugin_engine clap clap-wrapper-extensions)
     target_compile_features(tryst_clap_impl PUBLIC cxx_std_20)
     target_compile_definitions(tryst_clap_impl PRIVATE TRYST_PLUGIN_VERSION="${PROJECT_VERSION}")
-    set_target_properties(tryst_clap_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
     if (MSVC)
         target_compile_options(tryst_clap_impl PRIVATE /W4 /permissive-)
