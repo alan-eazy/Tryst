@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Voice.h"
+#include "../Modulation/ModulationRuntime.h"
+#include "../Modulation/TargetValueStore.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -21,16 +23,30 @@ public:
     [[nodiscard]] bool setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept;
     void setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept;
 
+    [[nodiscard]] bool addModulationRoute(tryst::mod::Route route) noexcept;
+    void clearModulationRoutes() noexcept;
+    [[nodiscard]] bool setMacro(std::size_t index, float normalized) noexcept;
+    void setMorphX(float normalized) noexcept;
+    void setMorphY(float normalized) noexcept;
+    [[nodiscard]] bool setModulationSource(tryst::mod::SourceId source, float value) noexcept;
+
     void noteOn(const NoteEvent& event) noexcept;
     void noteOff(std::int32_t note, float releaseVelocity = 0.0f) noexcept;
     void render(ProcessContext& context) noexcept;
 
     [[nodiscard]] std::size_t activeVoiceCount() const noexcept;
+    [[nodiscard]] std::size_t modulationRouteCount() const noexcept { return modulation.routeCount(); }
 
 private:
     [[nodiscard]] Voice& chooseVoice() noexcept;
+    [[nodiscard]] bool broadcastTarget(tryst::mod::TargetId target, float normalized) noexcept;
+    [[nodiscard]] bool ensureTargetBase(tryst::mod::TargetId target) noexcept;
+    void refreshTarget(tryst::mod::TargetId target) noexcept;
+    void refreshAllModulation() noexcept;
 
     std::array<Voice, maxVoices> voices;
+    tryst::mod::ModulationRuntime modulation;
+    tryst::mod::TargetValueStore baseTargets;
     std::uint64_t ageCounter = 0;
 };
 }

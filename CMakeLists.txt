@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.4.0 LANGUAGES CXX)
+project(Tryst VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,7 @@ add_library(tryst_core STATIC
     Source/Modulation/AdsrEnvelope.cpp
     Source/Modulation/Lfo.cpp
     Source/Modulation/ModMatrix.cpp
+    Source/Modulation/ModulationRuntime.cpp
 )
 
 target_include_directories(tryst_core PUBLIC Source)

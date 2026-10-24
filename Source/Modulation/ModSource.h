@@ -19,7 +19,8 @@ enum class SourceType : std::uint8_t
     macro,
     morphX,
     morphY,
-    envelopeFollower
+    envelopeFollower,
+    count
 };
 
 struct SourceId

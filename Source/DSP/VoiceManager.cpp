@@ -1,6 +1,5 @@
 #include "VoiceManager.h"
 #include <algorithm>
-#include <limits>
 
 namespace tryst::dsp
 {
@@ -25,9 +24,20 @@ void VoiceManager::reset() noexcept
 
 bool VoiceManager::setEngineKind(std::size_t slot, EngineKind kind)
 {
+    if (slot >= Voice::generatorSlots)
+        return false;
+
     bool success = true;
     for (auto& voice : voices)
         success = voice.setEngineKind(slot, kind) && success;
+
+    for (std::size_t i = 0; i < baseTargets.size(); ++i)
+    {
+        const auto& entry = baseTargets[i];
+        if (entry.target.domain == tryst::mod::TargetDomain::generator && entry.target.slot == slot)
+            refreshTarget(entry.target);
+    }
+
     return success;
 }
 
@@ -37,26 +47,86 @@ void VoiceManager::clearEngine(std::size_t slot) noexcept
         voice.clearEngine(slot);
 }
 
-bool VoiceManager::setEngineParameter(std::size_t slot, tryst::params::DestinationId destination, float normalized) noexcept
+bool VoiceManager::setEngineParameter(std::size_t slot,
+                                      tryst::params::DestinationId destination,
+                                      float normalized) noexcept
 {
-    bool success = true;
-    for (auto& voice : voices)
-        success = voice.setEngineParameter(slot, destination, normalized) && success;
-    return success;
+    if (slot >= Voice::generatorSlots)
+        return false;
+
+    const tryst::mod::TargetId target { tryst::mod::TargetDomain::generator,
+                                        static_cast<std::uint8_t>(slot),
+                                        destination };
+    if (!baseTargets.set(target, normalized))
+        return false;
+
+    return broadcastTarget(target, modulation.evaluate(target, normalized));
 }
 
 bool VoiceManager::setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept
 {
-    bool success = true;
-    for (auto& voice : voices)
-        success = voice.setFilterParameter(destination, normalized) && success;
-    return success;
+    const tryst::mod::TargetId target { tryst::mod::TargetDomain::filter, 0, destination };
+    if (!baseTargets.set(target, normalized))
+        return false;
+
+    return broadcastTarget(target, modulation.evaluate(target, normalized));
 }
 
 void VoiceManager::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
 {
     for (auto& voice : voices)
         voice.setAmpEnvelope(parameters);
+}
+
+bool VoiceManager::addModulationRoute(tryst::mod::Route route) noexcept
+{
+    if (route.target.domain == tryst::mod::TargetDomain::generator && route.target.slot >= Voice::generatorSlots)
+        return false;
+
+    if (!ensureTargetBase(route.target))
+        return false;
+
+    if (!modulation.addRoute(route))
+        return false;
+
+    refreshTarget(route.target);
+    return true;
+}
+
+void VoiceManager::clearModulationRoutes() noexcept
+{
+    modulation.clearRoutes();
+    refreshAllModulation();
+}
+
+bool VoiceManager::setMacro(std::size_t index, float normalized) noexcept
+{
+    if (!modulation.setMacro(index, normalized))
+        return false;
+
+    refreshAllModulation();
+    return true;
+}
+
+void VoiceManager::setMorphX(float normalized) noexcept
+{
+    modulation.setMorphX(normalized);
+    refreshAllModulation();
+}
+
+void VoiceManager::setMorphY(float normalized) noexcept
+{
+    modulation.setMorphY(normalized);
+    refreshAllModulation();
+}
+
+bool VoiceManager::setModulationSource(tryst::mod::SourceId source, float value) noexcept
+{
+    if (!modulation.setSource(source, value))
+        return false;
+
+    refreshAllModulation();
+    return true;
 }
 
 void VoiceManager::noteOn(const NoteEvent& event) noexcept
@@ -98,4 +168,52 @@ Voice& VoiceManager::chooseVoice() noexcept
             oldest = &voice;
 
     return *oldest;
+}
+
+bool VoiceManager::broadcastTarget(tryst::mod::TargetId target, float normalized) noexcept
+{
+    if (target.domain == tryst::mod::TargetDomain::generator)
+    {
+        bool success = true;
+        for (auto& voice : voices)
+            success = voice.setEngineParameter(target.slot, target.parameter, normalized) && success;
+        return success;
+    }
+
+    if (target.domain == tryst::mod::TargetDomain::filter)
+    {
+        bool success = true;
+        for (auto& voice : voices)
+            success = voice.setFilterParameter(target.parameter, normalized) && success;
+        return success;
+    }
+
+    return false;
+}
+
+bool VoiceManager::ensureTargetBase(tryst::mod::TargetId target) noexcept
+{
+    if (baseTargets.find(target) != nullptr)
+        return true;
+
+    const auto* descriptor = tryst::params::ParameterRegistry::find(target.parameter);
+    if (descriptor == nullptr)
+        return false;
+
+    return baseTargets.set(target, descriptor->defaultNormalized);
+}
+
+void VoiceManager::refreshTarget(tryst::mod::TargetId target) noexcept
+{
+    const auto* entry = baseTargets.find(target);
+    if (entry == nullptr)
+        return;
+
+    (void) broadcastTarget(target, modulation.evaluate(target, entry->baseValue));
+}
+
+void VoiceManager::refreshAllModulation() noexcept
+{
+    for (std::size_t i = 0; i < baseTargets.size(); ++i)
+        refreshTarget(baseTargets[i].target);
 }

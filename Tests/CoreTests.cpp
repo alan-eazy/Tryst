@@ -5,6 +5,7 @@
 #include "Modulation/AdsrEnvelope.h"
 #include "Modulation/Lfo.h"
 #include "Modulation/ModMatrix.h"
+#include "Modulation/ModulationRuntime.h"
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -16,10 +17,28 @@ namespace
 void testModMatrix()
 {
     tryst::mod::ModMatrix matrix;
+    tryst::mod::SourceSnapshot sources;
     const tryst::mod::SourceId lfo { tryst::mod::SourceType::lfo, 0 };
-    assert(matrix.addRoute({ lfo, 7, 0.25f, 0.0f, true }));
-    const auto value = matrix.apply(7, 0.5f, lfo, 1.0f);
+    const tryst::mod::TargetId target { tryst::mod::TargetDomain::filter, 0, tryst::params::destination::filter1Cutoff };
+    assert(sources.set(lfo, 1.0f));
+    assert(matrix.addRoute({ lfo, target, 0.25f, 0.0f, true }));
+    const auto value = matrix.apply(target, 0.5f, sources);
     assert(std::abs(value - 0.75f) < 0.0001f);
+}
+
+void testModulationRuntime()
+{
+    tryst::mod::ModulationRuntime runtime;
+    const tryst::mod::TargetId shape { tryst::mod::TargetDomain::generator, 0, tryst::params::destination::analogShape };
+    const tryst::mod::TargetId cutoff { tryst::mod::TargetDomain::filter, 0, tryst::params::destination::filter1Cutoff };
+
+    assert(runtime.addRoute({ { tryst::mod::SourceType::macro, 0 }, shape, 0.5f, 0.0f, true }));
+    assert(runtime.addRoute({ { tryst::mod::SourceType::morphX, 0 }, cutoff, -0.5f, 0.0f, true }));
+    assert(runtime.setMacro(0, 1.0f));
+    runtime.setMorphX(1.0f);
+
+    assert(std::abs(runtime.evaluate(shape, 0.25f) - 0.75f) < 0.0001f);
+    assert(std::abs(runtime.evaluate(cutoff, 0.8f) - 0.3f) < 0.0001f);
 }
 
 void testAdsr()
@@ -203,6 +222,44 @@ void testFiltersInVoiceManager()
     assert(filteredEnergy < dryEnergy * 0.5f);
 }
 
+void testMacroAndXYRoutingInVoiceManager()
+{
+    tryst::dsp::VoiceManager manager;
+    manager.prepare(48000.0, 256);
+    manager.setAmpEnvelope({ 0.0f, 0.0f, 1.0f, 0.0f });
+
+    assert(manager.setEngineParameter(0, tryst::params::destination::analogShape, 0.0f));
+    assert(manager.setFilterParameter(tryst::params::destination::filter1Enabled, 1.0f));
+    assert(manager.setFilterParameter(tryst::params::destination::filter1Cutoff, 0.8f));
+
+    assert(manager.addModulationRoute({
+        { tryst::mod::SourceType::macro, 0 },
+        { tryst::mod::TargetDomain::generator, 0, tryst::params::destination::analogShape },
+        1.0f, 0.0f, true
+    }));
+    assert(manager.addModulationRoute({
+        { tryst::mod::SourceType::morphX, 0 },
+        { tryst::mod::TargetDomain::filter, 0, tryst::params::destination::filter1Cutoff },
+        -0.7f, 0.0f, true
+    }));
+    assert(manager.modulationRouteCount() == 2);
+
+    assert(manager.setMacro(0, 1.0f));
+    manager.setMorphX(1.0f);
+    manager.noteOn({ 72, 1.0f });
+
+    std::array<float, 256> left {};
+    std::array<float, 256> right {};
+    tryst::dsp::ProcessContext context { 48000.0, left, right };
+    manager.render(context);
+
+    const auto nonZero = std::any_of(left.begin(), left.end(), [](float sample) { return std::abs(sample) > 0.0001f; });
+    assert(nonZero);
+
+    manager.clearModulationRoutes();
+    assert(manager.modulationRouteCount() == 0);
+}
+
 void testPolyphonicVoiceManager()
 {
     tryst::dsp::VoiceManager manager;
@@ -240,12 +297,14 @@ int main()
 {
     testParameterRegistry();
     testModMatrix();
+    testModulationRuntime();
     testAdsr();
     testLfo();
     testWavetableEngine();
     testWavetableInVoiceManager();
     testDualFilterChain();
     testFiltersInVoiceManager();
+    testMacroAndXYRoutingInVoiceManager();
     testPolyphonicVoiceManager();
     std::cout << "Tryst core tests passed\n";
     return 0;

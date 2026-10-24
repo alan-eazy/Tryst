@@ -16,8 +16,8 @@
 - Engine interface for analog, wavetable, sampler, granular, spectral, additive, physical-model and noise engines
 - Working morphable wavetable engine with immutable table assets and frame interpolation
 - Dual per-voice multimode filters with serial/parallel routing
-- Central modulation matrix with bipolar depth
-- Macro/XY-ready modulation sources
+- Central modulation matrix with slot-aware targets and bipolar depth
+- Working 8-macro + XY modulation runtime for generator and filter destinations
 - Voice-local and global modulation distinction
 - Stable parameter registry with normalized runtime destination IDs
 - Roadmap for routing, filters, effects, MPE, microtuning and preset morphing
@@ -26,4 +26,4 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/
 
 ## Status
 
-The DSP core now contains the architecture foundation, analog and wavetable engines, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO, stable normalized parameter destinations, dual multimode filters, and smoke tests. The wavetable engine currently supports immutable in-memory frame sets plus continuous frame morphing; file import and band-limited mipmaps are still pending. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.
+The DSP core now contains the architecture foundation, analog and wavetable engines, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO, stable normalized parameter destinations, dual multimode filters, live macro/XY modulation routing, and smoke tests. The wavetable engine currently supports immutable in-memory frame sets plus continuous frame morphing; file import and band-limited mipmaps are still pending. Macro/XY routing currently updates at control rate; dedicated audio-rate modulation paths remain planned. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.
