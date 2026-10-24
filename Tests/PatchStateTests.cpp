@@ -22,6 +22,17 @@ tryst::state::PatchState makePatch()
     patch.morphY = 0.6f;
     patch.lfos[0] = { 5.0f, tryst::mod::LfoWaveform::square };
 
+    patch.msegs[0].rateHz = 0.5f;
+    patch.msegs[0].loop = true;
+    patch.msegs[0].points = {
+        { 0.0f, -1.0f },
+        { 0.25f, 0.5f },
+        { 1.0f, -0.25f }
+    };
+    patch.steps[0].rateHz = 2.0f;
+    patch.steps[0].loop = true;
+    patch.steps[0].values = { -1.0f, 0.0f, 1.0f, 0.25f };
+
     patch.parameters.push_back({ tryst::mod::TargetDomain::generator, 0, "generator.level", 0.45f });
     patch.parameters.push_back({ tryst::mod::TargetDomain::generator, 0, "engine.analog.shape", 0.20f });
     patch.parameters.push_back({ tryst::mod::TargetDomain::generator, 1, "generator.level", 0.25f });
@@ -49,6 +60,26 @@ tryst::state::PatchState makePatch()
         0.0f,
         true
     });
+    patch.routes.push_back({
+        true,
+        { tryst::mod::SourceType::mseg, 0 },
+        tryst::mod::TargetDomain::filter,
+        0,
+        "filter.1.cutoff",
+        0.25f,
+        0.0f,
+        true
+    });
+    patch.routes.push_back({
+        true,
+        { tryst::mod::SourceType::step, 0 },
+        tryst::mod::TargetDomain::generator,
+        0,
+        "engine.analog.shape",
+        0.30f,
+        0.0f,
+        true
+    });
     return patch;
 }
 
@@ -63,6 +94,10 @@ void testRoundTrip()
     assert(decoded.patch->generators[1].kind == tryst::dsp::EngineKind::wavetable);
     assert(decoded.patch->parameters.size() == source.parameters.size());
     assert(decoded.patch->routes.size() == source.routes.size());
+    assert(decoded.patch->msegs[0].points.size() == 3);
+    assert(decoded.patch->steps[0].values.size() == 4);
+    assert(std::abs(decoded.patch->msegs[0].points[1].value - 0.5f) < 0.00001f);
+    assert(std::abs(decoded.patch->steps[0].values[2] - 1.0f) < 0.00001f);
     assert(std::abs(decoded.patch->macros[0] - 0.75f) < 0.00001f);
     assert(tryst::state::PatchCodec::encode(*decoded.patch) == encoded);
 }
@@ -77,7 +112,7 @@ void testApplyToVoiceManager()
     manager.prepare(48000.0, 128);
     assert(tryst::state::PatchApplier::apply(*decoded.patch, manager));
     assert(manager.modulationRouteCount() == 1);
-    assert(manager.fastModulationRouteCount() == 1);
+    assert(manager.fastModulationRouteCount() == 3);
 
     manager.noteOn({ 64, 0.9f });
     std::array<float, 128> left {};
@@ -99,6 +134,18 @@ void testDecodeValidation()
 
     const auto missingEnd = tryst::state::PatchCodec::decode("TRYST_PATCH 1\nengine 0 1 analog\n");
     assert(!missingEnd);
+
+    const auto migrated = tryst::state::PatchCodec::decode("TRYST_PATCH 1\nend\n");
+    assert(migrated);
+    assert(migrated.patch->schemaVersion == tryst::state::PatchState::currentSchemaVersion);
+    assert(migrated.patch->msegs[0].points.empty());
+    assert(migrated.patch->steps[0].values.empty());
+    const auto migratedText = tryst::state::PatchCodec::encode(*migrated.patch);
+    assert(migratedText.rfind("TRYST_PATCH 2\n", 0) == 0);
+
+    const auto badMseg = tryst::state::PatchCodec::decode(
+        "TRYST_PATCH 2\nmseg 0 1 1 2 0 0 0.5 1\nend\n");
+    assert(!badMseg);
 }
 }
 
