@@ -12,7 +12,7 @@
 - [x] Voice-local fast LFO modulation lane (16-sample bounded updates; true per-sample paths still selective/future)
 - [x] Parameter registry / normalized destination map
 - [ ] Host wrapper (VST3 + CLAP first)
-- [ ] Basic preset serialization
+- [x] Basic preset serialization (versioned schema-1 text codec; external asset references still future)
 - [x] Unit tests and DSP smoke tests
 
 ## P1 — Core instrument
