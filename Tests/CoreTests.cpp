@@ -1,4 +1,6 @@
+#include "Core/ParameterRegistry.h"
 #include "DSP/VoiceManager.h"
+#include "DSP/WavetableEngine.h"
 #include "Modulation/AdsrEnvelope.h"
 #include "Modulation/Lfo.h"
 #include "Modulation/ModMatrix.h"
@@ -61,6 +63,67 @@ void testLfo()
     assert(maximum > 0.9f);
 }
 
+void testParameterRegistry()
+{
+    const auto all = tryst::params::ParameterRegistry::all();
+    assert(all.size() >= 4);
+
+    const auto* position = tryst::params::ParameterRegistry::find("engine.wavetable.position");
+    assert(position != nullptr);
+    assert(position->destination == tryst::params::destination::wavetablePosition);
+
+    const auto* level = tryst::params::ParameterRegistry::find(tryst::params::destination::generatorLevel);
+    assert(level != nullptr);
+    assert(level->id == "generator.level");
+}
+
+void testWavetableEngine()
+{
+    tryst::dsp::WavetableEngine engine;
+    engine.prepare(48000.0, 256);
+    assert(engine.setParameter(tryst::params::destination::generatorLevel, 1.0f));
+    assert(engine.setParameter(tryst::params::destination::wavetablePosition, 0.0f));
+    engine.noteOn({ 60, 1.0f });
+
+    std::array<float, 256> sineLeft {};
+    std::array<float, 256> sineRight {};
+    tryst::dsp::ProcessContext sineContext { 48000.0, sineLeft, sineRight };
+    engine.render(sineContext);
+
+    engine.reset();
+    assert(engine.setParameter(tryst::params::destination::wavetablePosition, 1.0f));
+    engine.noteOn({ 60, 1.0f });
+
+    std::array<float, 256> squareLeft {};
+    std::array<float, 256> squareRight {};
+    tryst::dsp::ProcessContext squareContext { 48000.0, squareLeft, squareRight };
+    engine.render(squareContext);
+
+    float difference = 0.0f;
+    for (std::size_t i = 0; i < sineLeft.size(); ++i)
+        difference += std::abs(sineLeft[i] - squareLeft[i]);
+
+    assert(difference > 1.0f);
+}
+
+void testWavetableInVoiceManager()
+{
+    tryst::dsp::VoiceManager manager;
+    manager.prepare(48000.0, 128);
+    assert(manager.setEngineKind(1, tryst::dsp::EngineKind::wavetable));
+    assert(manager.setEngineParameter(1, tryst::params::destination::wavetablePosition, 0.65f));
+    assert(manager.setEngineParameter(1, tryst::params::destination::generatorLevel, 0.25f));
+
+    manager.noteOn({ 67, 0.9f });
+    std::array<float, 128> left {};
+    std::array<float, 128> right {};
+    tryst::dsp::ProcessContext context { 48000.0, left, right };
+    manager.render(context);
+
+    const auto nonZero = std::any_of(left.begin(), left.end(), [](float sample) { return std::abs(sample) > 0.0001f; });
+    assert(nonZero);
+}
+
 void testPolyphonicVoiceManager()
 {
     tryst::dsp::VoiceManager manager;
@@ -96,9 +159,12 @@ void testPolyphonicVoiceManager()
 
 int main()
 {
+    testParameterRegistry();
     testModMatrix();
     testAdsr();
     testLfo();
+    testWavetableEngine();
+    testWavetableInVoiceManager();
     testPolyphonicVoiceManager();
     std::cout << "Tryst core tests passed\n";
     return 0;
