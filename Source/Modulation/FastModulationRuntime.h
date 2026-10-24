@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Lfo.h"
+#include "Mseg.h"
+#include "StepSequencer.h"
 #include "ModMatrix.h"
 #include "TargetValueStore.h"
 #include <array>
@@ -13,6 +15,8 @@ class FastModulationRuntime
 {
 public:
     static constexpr std::size_t lfoCount = 4;
+    static constexpr std::size_t msegCount = 2;
+    static constexpr std::size_t stepCount = 2;
     static constexpr std::size_t maxTargets = 64;
     static constexpr std::uint32_t preferredChunkSize = 16;
 
@@ -20,6 +24,8 @@ public:
     void resetPhases() noexcept;
 
     [[nodiscard]] bool configureLfo(std::size_t index, float rateHz, LfoWaveform waveform) noexcept;
+    [[nodiscard]] bool configureMseg(std::size_t index, std::span<const MsegPoint> points, float rateHz, bool loop) noexcept;
+    [[nodiscard]] bool configureStep(std::size_t index, std::span<const float> values, float rateHz, bool loop) noexcept;
     [[nodiscard]] bool addRoute(Route route) noexcept;
     void clearRoutes() noexcept;
     [[nodiscard]] bool setBase(TargetId target, float normalized) noexcept;
@@ -52,6 +58,8 @@ private:
     SourceSnapshot sources;
     TargetValueStore baseValues;
     std::array<Lfo, lfoCount> lfos;
+    std::array<Mseg, msegCount> msegs;
+    std::array<StepSequencer, stepCount> steps;
     std::array<TargetId, maxTargets> targets {};
     std::size_t targetCount = 0;
 };

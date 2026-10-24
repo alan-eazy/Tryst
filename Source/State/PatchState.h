@@ -3,6 +3,8 @@
 #include "DSP/Engine.h"
 #include "Modulation/AdsrEnvelope.h"
 #include "Modulation/Lfo.h"
+#include "Modulation/Mseg.h"
+#include "Modulation/StepSequencer.h"
 #include "Modulation/ModMatrix.h"
 #include <array>
 #include <cstdint>
@@ -31,6 +33,20 @@ struct LfoState
     tryst::mod::LfoWaveform waveform = tryst::mod::LfoWaveform::sine;
 };
 
+struct MsegState
+{
+    float rateHz = 1.0f;
+    bool loop = true;
+    std::vector<tryst::mod::MsegPoint> points;
+};
+
+struct StepState
+{
+    float rateHz = 1.0f;
+    bool loop = true;
+    std::vector<float> values;
+};
+
 struct RouteState
 {
     bool fast = false;
@@ -45,7 +61,8 @@ struct RouteState
 
 struct PatchState
 {
-    static constexpr std::uint32_t currentSchemaVersion = 1;
+    static constexpr std::uint32_t currentSchemaVersion = 2;
+    static constexpr std::uint32_t minimumReadableSchemaVersion = 1;
 
     std::uint32_t schemaVersion = currentSchemaVersion;
     std::array<GeneratorState, 4> generators {{ { true, tryst::dsp::EngineKind::analog }, {}, {}, {} }};
@@ -54,6 +71,8 @@ struct PatchState
     float morphX = 0.0f;
     float morphY = 0.0f;
     std::array<LfoState, 4> lfos {};
+    std::array<MsegState, 2> msegs {};
+    std::array<StepState, 2> steps {};
     std::vector<ParameterState> parameters;
     std::vector<RouteState> routes;
 };

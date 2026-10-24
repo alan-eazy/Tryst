@@ -148,6 +148,28 @@ bool VoiceManager::configureVoiceLfo(std::size_t index, float rateHz, tryst::mod
     return success;
 }
 
+bool VoiceManager::configureVoiceMseg(std::size_t index,
+                                      std::span<const tryst::mod::MsegPoint> points,
+                                      float rateHz,
+                                      bool loop) noexcept
+{
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.configureFastMseg(index, points, rateHz, loop) && success;
+    return success;
+}
+
+bool VoiceManager::configureVoiceStep(std::size_t index,
+                                      std::span<const float> values,
+                                      float rateHz,
+                                      bool loop) noexcept
+{
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.configureFastStep(index, values, rateHz, loop) && success;
+    return success;
+}
+
 bool VoiceManager::addFastModulationRoute(tryst::mod::Route route) noexcept
 {
     if (route.target.domain == tryst::mod::TargetDomain::global)

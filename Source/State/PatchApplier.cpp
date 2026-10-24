@@ -44,6 +44,20 @@ bool PatchApplier::apply(const PatchState& patch, tryst::dsp::VoiceManager& mana
     for (std::size_t i = 0; i < patch.lfos.size(); ++i)
         success = manager.configureVoiceLfo(i, patch.lfos[i].rateHz, patch.lfos[i].waveform) && success;
 
+    for (std::size_t i = 0; i < patch.msegs.size(); ++i)
+    {
+        const auto& mseg = patch.msegs[i];
+        if (!mseg.points.empty())
+            success = manager.configureVoiceMseg(i, mseg.points, mseg.rateHz, mseg.loop) && success;
+    }
+
+    for (std::size_t i = 0; i < patch.steps.size(); ++i)
+    {
+        const auto& step = patch.steps[i];
+        if (!step.values.empty())
+            success = manager.configureVoiceStep(i, step.values, step.rateHz, step.loop) && success;
+    }
+
     for (const auto& savedRoute : patch.routes)
     {
         const auto* descriptor = tryst::params::ParameterRegistry::find(savedRoute.parameterId);

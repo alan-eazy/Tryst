@@ -57,7 +57,9 @@ The performance-source path is intentionally control-rate. It is suitable for ma
 
 ### 2.3 Voice-local fast modulation
 
-Each voice also owns a `FastModulationRuntime` with four independent LFOs. Continuous destinations marked `audioRateCapable` in the parameter registry may be routed through this lane. Voice rendering is split into fixed 16-sample chunks; at each chunk boundary the voice evaluates fast routes on top of the current macro/XY-adjusted base values, applies generator/filter destinations directly, renders the chunk, then advances its LFO phases. LFO phases reset when a voice starts, making the current implementation deterministic and voice-local. Toggle/discrete destinations are rejected from the fast lane. This is a bounded high-rate control path, not a claim of true per-sample modulation; genuinely audio-rate FM/PM and other sensitive destinations can receive specialized per-sample paths later.
+Each voice also owns a `FastModulationRuntime`. Continuous destinations marked `audioRateCapable` in the parameter registry may be routed through this lane. Voice rendering is split into fixed 16-sample chunks; at each chunk boundary the voice evaluates fast routes on top of the current macro/XY-adjusted base values, applies generator/filter destinations directly, renders the chunk, then advances its voice-local source phases. Toggle/discrete destinations are rejected from the fast lane. This is a bounded high-rate control path, not a claim of true per-sample modulation; genuinely audio-rate FM/PM and other sensitive destinations can receive specialized per-sample paths later.
+
+Current fast sources are voice-local and note-resettable: four LFOs, two MSEGs (up to 16 linear points each) and two step sequencers (up to 16 bipolar values each). They share the same bounded 16-sample update lane and stable target IDs. MSEGs and steps can loop or run one-shot; their rates are currently expressed as complete cycles per second until host-tempo transport is introduced by the wrapper layer.
 
 Long-term requirements:
 
@@ -95,9 +97,9 @@ A deeper Design view can expose engines, modulation, routing and effect details.
 
 ## 5. Presets
 
-Patch files are versioned data, not binary object dumps. Stable parameter string IDs are the compatibility contract; the 32-bit runtime destination hashes are not persisted. `PatchCodec` schema 1 serializes engine topology, normalized parameters, ADSR, macros/XY, voice LFO settings, and both control-rate and fast modulation routes into deterministic UTF-8 text. `PatchApplier` rebuilds that state through the public `VoiceManager` control API. Decode errors and unsupported schema versions fail explicitly rather than being silently coerced.
+Patch files are versioned data, not binary object dumps. Stable parameter string IDs are the compatibility contract; the 32-bit runtime destination hashes are not persisted. `PatchCodec` schema 2 serializes engine topology, normalized parameters, ADSR, macros/XY, voice LFO/MSEG/step settings, and both control-rate and fast modulation routes into deterministic UTF-8 text. Schema 1 is migrated in memory on decode. `PatchApplier` rebuilds that state through the public `VoiceManager` control API. Decode errors and unsupported schema versions fail explicitly rather than being silently coerced.
 
-Heavy engine assets are deliberately not embedded in schema 1. Sample, wavetable and future spectral data remain immutable external assets and will use a separate reference/resolution layer. See [`PATCH_FORMAT.md`](PATCH_FORMAT.md).
+Heavy engine assets are deliberately not embedded in schema 2. Sample, wavetable and future spectral data remain immutable external assets and will use a separate reference/resolution layer. See [`PATCH_FORMAT.md`](PATCH_FORMAT.md).
 
 Planned patch states:
 

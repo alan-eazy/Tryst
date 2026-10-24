@@ -32,6 +32,8 @@ public:
     [[nodiscard]] bool setModulationSource(tryst::mod::SourceId source, float value) noexcept;
 
     [[nodiscard]] bool configureVoiceLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept;
+    [[nodiscard]] bool configureVoiceMseg(std::size_t index, std::span<const tryst::mod::MsegPoint> points, float rateHz, bool loop) noexcept;
+    [[nodiscard]] bool configureVoiceStep(std::size_t index, std::span<const float> values, float rateHz, bool loop) noexcept;
     [[nodiscard]] bool addFastModulationRoute(tryst::mod::Route route) noexcept;
     void clearFastModulationRoutes() noexcept;
     [[nodiscard]] std::size_t fastModulationRouteCount() const noexcept;

@@ -1,6 +1,7 @@
 #include "PatchCodec.h"
 #include "Core/ParameterRegistry.h"
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <sstream>
 
@@ -161,6 +162,28 @@ std::string PatchCodec::encode(const PatchState& patch)
     for (std::size_t i = 0; i < patch.lfos.size(); ++i)
         out << "lfo " << i << ' ' << patch.lfos[i].rateHz << ' ' << waveformName(patch.lfos[i].waveform) << '\n';
 
+    for (std::size_t i = 0; i < patch.msegs.size(); ++i)
+    {
+        const auto& mseg = patch.msegs[i];
+        if (mseg.points.empty())
+            continue;
+        out << "mseg " << i << ' ' << mseg.rateHz << ' ' << (mseg.loop ? 1 : 0) << ' ' << mseg.points.size();
+        for (const auto& point : mseg.points)
+            out << ' ' << point.phase << ' ' << point.value;
+        out << '\n';
+    }
+
+    for (std::size_t i = 0; i < patch.steps.size(); ++i)
+    {
+        const auto& step = patch.steps[i];
+        if (step.values.empty())
+            continue;
+        out << "step " << i << ' ' << step.rateHz << ' ' << (step.loop ? 1 : 0) << ' ' << step.values.size();
+        for (const auto value : step.values)
+            out << ' ' << value;
+        out << '\n';
+    }
+
     for (const auto& parameter : patch.parameters)
         out << "param " << domainName(parameter.domain) << ' ' << static_cast<unsigned>(parameter.slot) << ' '
             << parameter.parameterId << ' ' << parameter.normalized << '\n';
@@ -184,6 +207,7 @@ PatchDecodeResult PatchCodec::decode(std::string_view text)
     std::size_t lineNumber = 0;
     bool sawHeader = false;
     bool sawEnd = false;
+    std::uint32_t sourceVersion = PatchState::currentSchemaVersion;
 
     while (std::getline(input, line))
     {
@@ -202,9 +226,10 @@ PatchDecodeResult PatchCodec::decode(std::string_view text)
             std::uint32_t version = 0;
             if (!(row >> version))
                 return failure(lineNumber, "missing schema version");
-            if (version != PatchState::currentSchemaVersion)
+            if (version < PatchState::minimumReadableSchemaVersion || version > PatchState::currentSchemaVersion)
                 return failure(lineNumber, "unsupported schema version");
-            patch.schemaVersion = version;
+            sourceVersion = version;
+            patch.schemaVersion = PatchState::currentSchemaVersion;
             sawHeader = true;
             continue;
         }
@@ -263,6 +288,64 @@ PatchDecodeResult PatchCodec::decode(std::string_view text)
             if (!waveform)
                 return failure(lineNumber, "unknown LFO waveform");
             patch.lfos[index] = { rate, *waveform };
+            continue;
+        }
+        if (command == "mseg")
+        {
+            if (sourceVersion < 2)
+                return failure(lineNumber, "MSEG record not valid in schema 1");
+            std::size_t index = 0;
+            float rate = 0.0f;
+            int loop = 0;
+            std::size_t count = 0;
+            if (!(row >> index >> rate >> loop >> count) || index >= patch.msegs.size()
+                || rate < 0.0f || rate > 100.0f || count < 2 || count > tryst::mod::Mseg::maxPoints)
+                return failure(lineNumber, "invalid MSEG record");
+
+            MsegState state;
+            state.rateHz = rate;
+            state.loop = loop != 0;
+            state.points.reserve(count);
+            float previousPhase = -1.0f;
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                tryst::mod::MsegPoint point;
+                if (!(row >> point.phase >> point.value) || point.phase < 0.0f || point.phase > 1.0f
+                    || point.value < -1.0f || point.value > 1.0f || point.phase <= previousPhase)
+                    return failure(lineNumber, "invalid MSEG point");
+                previousPhase = point.phase;
+                state.points.push_back(point);
+            }
+            if (std::abs(state.points.front().phase) > 0.00001f
+                || std::abs(state.points.back().phase - 1.0f) > 0.00001f)
+                return failure(lineNumber, "MSEG must start at 0 and end at 1");
+            patch.msegs[index] = std::move(state);
+            continue;
+        }
+        if (command == "step")
+        {
+            if (sourceVersion < 2)
+                return failure(lineNumber, "step record not valid in schema 1");
+            std::size_t index = 0;
+            float rate = 0.0f;
+            int loop = 0;
+            std::size_t count = 0;
+            if (!(row >> index >> rate >> loop >> count) || index >= patch.steps.size()
+                || rate < 0.0f || rate > 100.0f || count == 0 || count > tryst::mod::StepSequencer::maxSteps)
+                return failure(lineNumber, "invalid step record");
+
+            StepState state;
+            state.rateHz = rate;
+            state.loop = loop != 0;
+            state.values.reserve(count);
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                float value = 0.0f;
+                if (!(row >> value) || value < -1.0f || value > 1.0f)
+                    return failure(lineNumber, "invalid step value");
+                state.values.push_back(value);
+            }
+            patch.steps[index] = std::move(state);
             continue;
         }
         if (command == "param")
