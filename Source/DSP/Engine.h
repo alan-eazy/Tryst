@@ -1,8 +1,10 @@
 #pragma once
 
 #include "../Core/ParameterRegistry.h"
+#include "EngineAsset.h"
 #include <cstdint>
 #include <span>
+#include <memory>
 #include <string_view>
 
 namespace tryst::dsp
@@ -49,5 +51,6 @@ public:
     virtual void noteOff(std::int32_t note, float releaseVelocity) noexcept = 0;
     virtual void render(ProcessContext& context) noexcept = 0;
     [[nodiscard]] virtual bool setParameter(tryst::params::DestinationId destination, float normalized) noexcept = 0;
+    [[nodiscard]] virtual bool setAsset(std::shared_ptr<const EngineAsset>) noexcept { return false; }
 };
 }

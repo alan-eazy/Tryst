@@ -63,6 +63,17 @@ bool Voice::setEngineParameter(std::size_t slotIndex, tryst::params::Destination
     return false;
 }
 
+bool Voice::setEngineAsset(std::size_t slotIndex, std::shared_ptr<const EngineAsset> asset) noexcept
+{
+    if (slotIndex >= slots.size() || !asset)
+        return false;
+
+    if (auto* engine = slots[slotIndex].get())
+        return engine->setAsset(std::move(asset));
+
+    return false;
+}
+
 bool Voice::setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept
 {
     return filters.setParameter(destination, normalized);

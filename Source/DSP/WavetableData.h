@@ -1,12 +1,13 @@
 #pragma once
 
+#include "EngineAsset.h"
 #include <cstddef>
 #include <memory>
 #include <vector>
 
 namespace tryst::dsp
 {
-class WavetableData
+class WavetableData : public EngineAsset
 {
 public:
     [[nodiscard]] static std::shared_ptr<const WavetableData> createBasic(std::size_t tableSize = 2048);

@@ -63,6 +63,17 @@ bool VoiceManager::setEngineParameter(std::size_t slot,
     return broadcastTarget(target, modulation.evaluate(target, normalized));
 }
 
+bool VoiceManager::setEngineAsset(std::size_t slot, std::shared_ptr<const EngineAsset> asset) noexcept
+{
+    if (slot >= Voice::generatorSlots || !asset)
+        return false;
+
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.setEngineAsset(slot, asset) && success;
+    return success;
+}
+
 bool VoiceManager::setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept
 {
     const tryst::mod::TargetId target { tryst::mod::TargetDomain::filter, 0, destination };

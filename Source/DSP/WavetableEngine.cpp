@@ -79,6 +79,16 @@ bool WavetableEngine::setParameter(tryst::params::DestinationId destination, flo
     return false;
 }
 
+bool WavetableEngine::setAsset(std::shared_ptr<const EngineAsset> next) noexcept
+{
+    const auto table = std::dynamic_pointer_cast<const WavetableData>(std::move(next));
+    if (!table)
+        return false;
+
+    setWavetable(table);
+    return true;
+}
+
 void WavetableEngine::setWavetable(std::shared_ptr<const WavetableData> next) noexcept
 {
     if (next && next->frames() > 0 && next->samplesPerFrame() > 1)

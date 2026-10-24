@@ -21,9 +21,17 @@ The engine API is intentionally host-agnostic. Plugin wrapper code should transl
 
 Engine creation and replacement happen on the control side. The audio render path only uses already-prepared engine instances.
 
-### 1.2 Wavetable assets
+### 1.2 Shared engine assets
+
+Heavy engine data derives from `EngineAsset` and is published to voices as immutable `shared_ptr<const EngineAsset>` objects outside the render path. The generic engine/voice API can broadcast one asset to every voice without teaching the voice manager about wavetable or sampler internals. This is the base for future sample, granular and spectral asset sharing.
+
+### 1.3 Wavetable assets
 
 `WavetableData` is an immutable frame asset created outside the audio thread. `WavetableEngine` performs linear interpolation both within a frame and between adjacent frames, so wavetable position can be modulated continuously without rebuilding data. The current built-in table contains sine, triangle, saw and square frames. Arbitrary frame sets can already be supplied in memory; file import, analysis and band-limited mipmap generation are intentionally deferred to the asset-loading layer.
+
+### 1.4 Sampler assets and playback
+
+`SampleData` stores immutable mono or stereo sample frames plus source sample rate and root MIDI note. `SamplerEngine` compensates source/host sample-rate differences, pitch-tracks notes relative to the root note, uses linear interpolation, and exposes normalized start/end, loop start/end, loop enable and reverse parameters through the same destination registry as the other engines. The current core is intentionally single-sample-per-slot; multisample key/velocity mapping and file decoding remain asset-layer work rather than audio-thread responsibilities.
 
 ## 2. Modulation
 

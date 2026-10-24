@@ -1,5 +1,7 @@
 #include "Core/ParameterRegistry.h"
 #include "DSP/FilterChain.h"
+#include "DSP/SampleData.h"
+#include "DSP/SamplerEngine.h"
 #include "DSP/VoiceManager.h"
 #include "DSP/WavetableEngine.h"
 #include "Modulation/AdsrEnvelope.h"
@@ -86,7 +88,7 @@ void testLfo()
 void testParameterRegistry()
 {
     const auto all = tryst::params::ParameterRegistry::all();
-    assert(all.size() >= 14);
+    assert(all.size() >= 20);
 
     const auto* position = tryst::params::ParameterRegistry::find("engine.wavetable.position");
     assert(position != nullptr);
@@ -146,6 +148,63 @@ void testWavetableInVoiceManager()
 
     const auto nonZero = std::any_of(left.begin(), left.end(), [](float sample) { return std::abs(sample) > 0.0001f; });
     assert(nonZero);
+}
+
+void testSamplerEngine()
+{
+    auto sample = tryst::dsp::SampleData::fromStereo(
+        { 0.0f, 0.5f, 1.0f, 0.5f, 0.0f, -0.5f, -1.0f, -0.5f },
+        { 0.0f, -0.5f, -1.0f, -0.5f, 0.0f, 0.5f, 1.0f, 0.5f },
+        48000.0, 60.0f);
+    assert(sample != nullptr);
+
+    tryst::dsp::SamplerEngine engine;
+    engine.prepare(48000.0, 64);
+    assert(engine.setAsset(sample));
+    assert(engine.setParameter(tryst::params::destination::generatorLevel, 1.0f));
+    assert(engine.setParameter(tryst::params::destination::samplerLoopEnabled, 1.0f));
+    assert(engine.setParameter(tryst::params::destination::samplerLoopStart, 0.0f));
+    assert(engine.setParameter(tryst::params::destination::samplerLoopEnd, 1.0f));
+    engine.noteOn({ 60, 1.0f });
+
+    std::array<float, 64> left {};
+    std::array<float, 64> right {};
+    tryst::dsp::ProcessContext context { 48000.0, left, right };
+    engine.render(context);
+
+    assert(std::any_of(left.begin(), left.end(), [](float value) { return std::abs(value) > 0.1f; }));
+    float stereoDifference = 0.0f;
+    for (std::size_t i = 0; i < left.size(); ++i)
+        stereoDifference += std::abs(left[i] - right[i]);
+    assert(stereoDifference > 1.0f);
+
+    left.fill(0.0f);
+    right.fill(0.0f);
+    engine.render(context);
+    assert(std::any_of(left.begin(), left.end(), [](float value) { return std::abs(value) > 0.1f; }));
+}
+
+void testSamplerInVoiceManager()
+{
+    auto sample = tryst::dsp::SampleData::fromMono(
+        { 0.0f, 0.4f, 0.8f, 0.4f, 0.0f, -0.4f, -0.8f, -0.4f },
+        48000.0, 60.0f);
+    assert(sample != nullptr);
+
+    tryst::dsp::VoiceManager manager;
+    manager.prepare(48000.0, 128);
+    manager.setAmpEnvelope({ 0.0f, 0.0f, 1.0f, 0.0f });
+    assert(manager.setEngineKind(2, tryst::dsp::EngineKind::sampler));
+    assert(manager.setEngineAsset(2, sample));
+    assert(manager.setEngineParameter(2, tryst::params::destination::generatorLevel, 0.5f));
+    assert(manager.setEngineParameter(2, tryst::params::destination::samplerLoopEnabled, 1.0f));
+    manager.noteOn({ 60, 1.0f });
+
+    std::array<float, 128> left {};
+    std::array<float, 128> right {};
+    tryst::dsp::ProcessContext context { 48000.0, left, right };
+    manager.render(context);
+    assert(std::any_of(left.begin(), left.end(), [](float value) { return std::abs(value) > 0.01f; }));
 }
 
 void testDualFilterChain()
@@ -302,6 +361,8 @@ int main()
     testLfo();
     testWavetableEngine();
     testWavetableInVoiceManager();
+    testSamplerEngine();
+    testSamplerInVoiceManager();
     testDualFilterChain();
     testFiltersInVoiceManager();
     testMacroAndXYRoutingInVoiceManager();

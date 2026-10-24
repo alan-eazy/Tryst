@@ -16,10 +16,10 @@
 
 ## P1 — Core instrument
 
-- [ ] Four generator slots
+- [x] Four generator slots
 - [x] Dual multimode filters with serial/parallel routing
 - [~] Wavetable engine (core engine complete; file import + band-limited mipmaps pending)
-- [ ] Sampler / multisample engine
+- [~] Sampler / multisample engine (single-sample playback/looping complete; multisample mapping + file decode pending)
 - [ ] Granular engine
 - [ ] Noise / texture generator
 - [ ] MSEG and step modulation

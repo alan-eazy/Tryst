@@ -20,6 +20,7 @@ public:
     void noteOff(std::int32_t note, float releaseVelocity) noexcept override;
     void render(ProcessContext& context) noexcept override;
     [[nodiscard]] bool setParameter(tryst::params::DestinationId destination, float normalized) noexcept override;
+    [[nodiscard]] bool setAsset(std::shared_ptr<const EngineAsset> next) noexcept override;
 
     void setWavetable(std::shared_ptr<const WavetableData> next) noexcept;
     void setPosition(float normalized) noexcept;
