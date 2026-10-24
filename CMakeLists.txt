@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.14.0 LANGUAGES CXX)
+project(Tryst VERSION 0.15.0 LANGUAGES CXX)
 
 if (APPLE)
     enable_language(OBJC)
@@ -86,6 +86,13 @@ if (TRYST_BUILD_PLUGINS)
     target_compile_features(tryst_clap_impl PUBLIC cxx_std_20)
     target_compile_definitions(tryst_clap_impl PRIVATE TRYST_PLUGIN_VERSION="${PROJECT_VERSION}")
     set_target_properties(tryst_clap_impl PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+    if (APPLE)
+        target_sources(tryst_clap_impl PRIVATE Source/Plugin/Clap/TrystCocoaEditor.mm)
+        target_compile_definitions(tryst_clap_impl PRIVATE TRYST_HAS_COCOA_GUI=1)
+        target_compile_options(tryst_clap_impl PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+        target_link_libraries(tryst_clap_impl PRIVATE "-framework AppKit")
+    endif()
 
     if (MSVC)
         target_compile_options(tryst_clap_impl PRIVATE /W4 /permissive-)
