@@ -20,6 +20,7 @@ public:
     [[nodiscard]] bool setEngineKind(std::size_t slot, EngineKind kind);
     void clearEngine(std::size_t slot) noexcept;
     [[nodiscard]] bool setEngineParameter(std::size_t slot, tryst::params::DestinationId destination, float normalized) noexcept;
+    [[nodiscard]] bool setEngineAsset(std::size_t slot, std::shared_ptr<const EngineAsset> asset) noexcept;
     [[nodiscard]] bool setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept;
     void setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept;
 
