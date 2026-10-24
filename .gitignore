@@ -1,0 +1,8 @@
+build/
+Builds/
+.DS_Store
+*.user
+*.suo
+*.xcodeproj/project.xcworkspace/xcuserdata/
+.vscode/
+.idea/
