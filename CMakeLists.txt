@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.3.0 LANGUAGES CXX)
+project(Tryst VERSION 0.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -9,8 +9,10 @@ add_library(tryst_core STATIC
     Source/Core/ParameterRegistry.cpp
     Source/DSP/AnalogEngine.cpp
     Source/DSP/EngineFactory.cpp
+    Source/DSP/FilterChain.cpp
     Source/DSP/Voice.cpp
     Source/DSP/VoiceManager.cpp
+    Source/DSP/StateVariableFilter.cpp
     Source/DSP/WavetableData.cpp
     Source/DSP/WavetableEngine.cpp
     Source/Modulation/AdsrEnvelope.cpp

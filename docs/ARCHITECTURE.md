@@ -51,6 +51,10 @@ The target routing model is a constrained real-time graph:
 
 Parallel and serial paths should be possible without requiring a fully general graph editor for normal use. The graph must be compiled outside the audio thread into a lock-free render plan.
 
+### 3.1 Dual voice filters
+
+Each voice owns two topology-preserving-transform state-variable filters. Each filter can operate as low-pass, band-pass, high-pass or notch, with logarithmic cutoff mapping and resonance control. The two filters can run in series or in parallel; parallel mode exposes a blend control between both filter outputs. Filter state is voice-local, while parameters are broadcast through `VoiceManager` and use the same stable destination registry as generator parameters.
+
 ## 4. Performance layer
 
 The performance surface should expose:

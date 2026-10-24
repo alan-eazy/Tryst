@@ -45,6 +45,14 @@ bool VoiceManager::setEngineParameter(std::size_t slot, tryst::params::Destinati
     return success;
 }
 
+bool VoiceManager::setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept
+{
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.setFilterParameter(destination, normalized) && success;
+    return success;
+}
+
 void VoiceManager::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
 {
     for (auto& voice : voices)
@@ -90,5 +98,4 @@ Voice& VoiceManager::chooseVoice() noexcept
             oldest = &voice;
 
     return *oldest;
-}
 }

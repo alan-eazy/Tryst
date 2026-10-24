@@ -1,4 +1,5 @@
 #include "Core/ParameterRegistry.h"
+#include "DSP/FilterChain.h"
 #include "DSP/VoiceManager.h"
 #include "DSP/WavetableEngine.h"
 #include "Modulation/AdsrEnvelope.h"
@@ -66,7 +67,7 @@ void testLfo()
 void testParameterRegistry()
 {
     const auto all = tryst::params::ParameterRegistry::all();
-    assert(all.size() >= 4);
+    assert(all.size() >= 14);
 
     const auto* position = tryst::params::ParameterRegistry::find("engine.wavetable.position");
     assert(position != nullptr);
@@ -75,6 +76,10 @@ void testParameterRegistry()
     const auto* level = tryst::params::ParameterRegistry::find(tryst::params::destination::generatorLevel);
     assert(level != nullptr);
     assert(level->id == "generator.level");
+
+    const auto* cutoff = tryst::params::ParameterRegistry::find("filter.1.cutoff");
+    assert(cutoff != nullptr);
+    assert(cutoff->destination == tryst::params::destination::filter1Cutoff);
 }
 
 void testWavetableEngine()
@@ -124,6 +129,80 @@ void testWavetableInVoiceManager()
     assert(nonZero);
 }
 
+void testDualFilterChain()
+{
+    tryst::dsp::FilterChain filters;
+    filters.prepare(48000.0);
+    assert(filters.setParameter(tryst::params::destination::filter1Enabled, 1.0f));
+    assert(filters.setParameter(tryst::params::destination::filter1Cutoff, 0.0f));
+    assert(filters.setParameter(tryst::params::destination::filter1Resonance, 0.0f));
+    assert(filters.setParameter(tryst::params::destination::filter1Mode, 0.0f));
+
+    std::array<float, 512> left {};
+    std::array<float, 512> right {};
+    for (std::size_t i = 0; i < left.size(); ++i)
+    {
+        const auto value = (i & 1U) == 0U ? 1.0f : -1.0f;
+        left[i] = value;
+        right[i] = value;
+    }
+
+    filters.process(left, right);
+
+    float tailEnergy = 0.0f;
+    for (std::size_t i = 256; i < left.size(); ++i)
+        tailEnergy += std::abs(left[i]);
+
+    assert(tailEnergy < 5.0f);
+
+    filters.reset();
+    assert(filters.setParameter(tryst::params::destination::filter2Enabled, 1.0f));
+    assert(filters.setParameter(tryst::params::destination::filter2Cutoff, 0.75f));
+    assert(filters.setParameter(tryst::params::destination::filter2Mode, 0.65f));
+    assert(filters.setParameter(tryst::params::destination::filterRouting, 1.0f));
+    assert(filters.setParameter(tryst::params::destination::filterParallelBlend, 0.5f));
+
+    left.fill(0.25f);
+    right.fill(0.25f);
+    filters.process(left, right);
+    assert(std::all_of(left.begin(), left.end(), [](float sample) { return std::isfinite(sample); }));
+}
+
+void testFiltersInVoiceManager()
+{
+    tryst::dsp::VoiceManager dry;
+    dry.prepare(48000.0, 256);
+    dry.setAmpEnvelope({ 0.0f, 0.0f, 1.0f, 0.0f });
+    dry.noteOn({ 84, 1.0f });
+
+    tryst::dsp::VoiceManager filtered;
+    filtered.prepare(48000.0, 256);
+    filtered.setAmpEnvelope({ 0.0f, 0.0f, 1.0f, 0.0f });
+    assert(filtered.setFilterParameter(tryst::params::destination::filter1Enabled, 1.0f));
+    assert(filtered.setFilterParameter(tryst::params::destination::filter1Cutoff, 0.15f));
+    assert(filtered.setFilterParameter(tryst::params::destination::filter1Mode, 0.0f));
+    filtered.noteOn({ 84, 1.0f });
+
+    std::array<float, 256> dryLeft {};
+    std::array<float, 256> dryRight {};
+    std::array<float, 256> filteredLeft {};
+    std::array<float, 256> filteredRight {};
+    tryst::dsp::ProcessContext dryContext { 48000.0, dryLeft, dryRight };
+    tryst::dsp::ProcessContext filteredContext { 48000.0, filteredLeft, filteredRight };
+    dry.render(dryContext);
+    filtered.render(filteredContext);
+
+    float dryEnergy = 0.0f;
+    float filteredEnergy = 0.0f;
+    for (std::size_t i = 0; i < dryLeft.size(); ++i)
+    {
+        dryEnergy += std::abs(dryLeft[i]);
+        filteredEnergy += std::abs(filteredLeft[i]);
+    }
+
+    assert(filteredEnergy < dryEnergy * 0.5f);
+}
+
 void testPolyphonicVoiceManager()
 {
     tryst::dsp::VoiceManager manager;
@@ -165,6 +244,8 @@ int main()
     testLfo();
     testWavetableEngine();
     testWavetableInVoiceManager();
+    testDualFilterChain();
+    testFiltersInVoiceManager();
     testPolyphonicVoiceManager();
     std::cout << "Tryst core tests passed\n";
     return 0;
