@@ -1,0 +1,59 @@
+name: Import Zynthyz baseline
+
+on:
+  push:
+    branches:
+      - baseline/zynthyz-29-play-view
+
+permissions:
+  contents: write
+
+jobs:
+  import-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reconstruct exact baseline snapshot
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cat .baseline-import/part-* > /tmp/baseline.b64
+          base64 -d /tmp/baseline.b64 > /tmp/baseline.tar.xz
+          echo "e337613f41d759e7aab90a1fae1c8ca0b028034ef4814c82399172f0b5c7778d  /tmp/baseline.tar.xz" | sha256sum -c -
+
+          rm -rf /tmp/baseline-src
+          mkdir -p /tmp/baseline-src
+          tar -xJf /tmp/baseline.tar.xz -C /tmp/baseline-src
+          src=/tmp/baseline-src/zynthyz-zynthyz-29-play-view
+
+          mkdir -p "$src/Resources/Fonts"
+          fonts_commit=e7db6ca603fd4862010383ff17ffd6cc4ffac1c0
+          fonts_root="https://raw.githubusercontent.com/google/fonts/${fonts_commit}/ofl"
+
+          curl -L --fail --retry 3 "$fonts_root/barlow/Barlow-Medium.ttf" \
+            -o "$src/Resources/Fonts/Barlow-Medium.ttf"
+          curl -L --fail --retry 3 "$fonts_root/barlow/Barlow-SemiBold.ttf" \
+            -o "$src/Resources/Fonts/Barlow-SemiBold.ttf"
+          curl -L --fail --retry 3 "$fonts_root/barlowcondensed/BarlowCondensed-Medium.ttf" \
+            -o "$src/Resources/Fonts/BarlowCondensed-Medium.ttf"
+          curl -L --fail --retry 3 "$fonts_root/barlowcondensed/BarlowCondensed-SemiBold.ttf" \
+            -o "$src/Resources/Fonts/BarlowCondensed-SemiBold.ttf"
+
+          test "$(git hash-object "$src/Resources/Fonts/Barlow-Medium.ttf")" = "d546e7a376da63b119bfbf67bc3e8bdee0172316"
+          test "$(git hash-object "$src/Resources/Fonts/Barlow-SemiBold.ttf")" = "7c974a4aa67c689a4b2a844b48f624cb4eeaa6bd"
+          test "$(git hash-object "$src/Resources/Fonts/BarlowCondensed-Medium.ttf")" = "eee49eb632153608c0bef5809ceab2418dd617a8"
+          test "$(git hash-object "$src/Resources/Fonts/BarlowCondensed-SemiBold.ttf")" = "9df66576492bee4bd0559066825472808fa98adc"
+
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$src"/. .
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Import Zynthyz 29 PLAY-view baseline [baseline imported]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
