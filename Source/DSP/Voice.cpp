@@ -10,6 +10,7 @@ void Voice::prepare(double newSampleRate, std::uint32_t maxBlockSize)
     scratchLeft.assign(preparedBlockSize, 0.0f);
     scratchRight.assign(preparedBlockSize, 0.0f);
     ampEnvelope.prepare(sampleRate);
+    filters.prepare(sampleRate);
 
     for (auto& slot : slots)
         if (auto* engine = slot.get())
@@ -21,6 +22,7 @@ void Voice::prepare(double newSampleRate, std::uint32_t maxBlockSize)
 void Voice::reset() noexcept
 {
     ampEnvelope.reset();
+    filters.reset();
     stopEngines();
     currentNote = -1;
     voiceAge = 0;
@@ -59,6 +61,11 @@ bool Voice::setEngineParameter(std::size_t slotIndex, tryst::params::Destination
         return engine->setParameter(destination, normalized);
 
     return false;
+}
+
+bool Voice::setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept
+{
+    return filters.setParameter(destination, normalized);
 }
 
 void Voice::setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept
@@ -114,6 +121,8 @@ void Voice::render(ProcessContext& context) noexcept
     for (auto& slot : slots)
         if (auto* engine = slot.get())
             engine->render(voiceContext);
+
+    filters.process(voiceContext.left, voiceContext.right);
 
     for (std::size_t i = 0; i < samples; ++i)
     {

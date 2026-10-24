@@ -25,6 +25,16 @@ inline constexpr DestinationId generatorLevel = destinationId("generator.level")
 inline constexpr DestinationId generatorTune = destinationId("generator.tune");
 inline constexpr DestinationId analogShape = destinationId("engine.analog.shape");
 inline constexpr DestinationId wavetablePosition = destinationId("engine.wavetable.position");
+inline constexpr DestinationId filter1Enabled = destinationId("filter.1.enabled");
+inline constexpr DestinationId filter1Cutoff = destinationId("filter.1.cutoff");
+inline constexpr DestinationId filter1Resonance = destinationId("filter.1.resonance");
+inline constexpr DestinationId filter1Mode = destinationId("filter.1.mode");
+inline constexpr DestinationId filter2Enabled = destinationId("filter.2.enabled");
+inline constexpr DestinationId filter2Cutoff = destinationId("filter.2.cutoff");
+inline constexpr DestinationId filter2Resonance = destinationId("filter.2.resonance");
+inline constexpr DestinationId filter2Mode = destinationId("filter.2.mode");
+inline constexpr DestinationId filterRouting = destinationId("filter.routing");
+inline constexpr DestinationId filterParallelBlend = destinationId("filter.parallel_blend");
 }
 
 struct ParameterDescriptor

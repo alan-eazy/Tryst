@@ -2,6 +2,7 @@
 
 #include "EngineFactory.h"
 #include "EngineSlot.h"
+#include "FilterChain.h"
 #include "../Modulation/AdsrEnvelope.h"
 #include <array>
 #include <cstddef>
@@ -21,6 +22,7 @@ public:
     [[nodiscard]] bool setEngineKind(std::size_t slot, EngineKind kind);
     void clearEngine(std::size_t slot) noexcept;
     [[nodiscard]] bool setEngineParameter(std::size_t slot, tryst::params::DestinationId destination, float normalized) noexcept;
+    [[nodiscard]] bool setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept;
     void setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept;
 
     void start(const NoteEvent& event, std::uint64_t newAge) noexcept;
@@ -38,6 +40,7 @@ private:
 
     std::array<EngineSlot, generatorSlots> slots;
     tryst::mod::AdsrEnvelope ampEnvelope;
+    FilterChain filters;
     std::vector<float> scratchLeft;
     std::vector<float> scratchRight;
     double sampleRate = 48000.0;

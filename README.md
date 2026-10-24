@@ -15,6 +15,7 @@
 - Four generic generator slots
 - Engine interface for analog, wavetable, sampler, granular, spectral, additive, physical-model and noise engines
 - Working morphable wavetable engine with immutable table assets and frame interpolation
+- Dual per-voice multimode filters with serial/parallel routing
 - Central modulation matrix with bipolar depth
 - Macro/XY-ready modulation sources
 - Voice-local and global modulation distinction
@@ -25,4 +26,4 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/
 
 ## Status
 
-The DSP core now contains the architecture foundation, analog and wavetable engines, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO, stable normalized parameter destinations and smoke tests. The wavetable engine currently supports immutable in-memory frame sets plus continuous frame morphing; file import and band-limited mipmaps are still pending. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.
+The DSP core now contains the architecture foundation, analog and wavetable engines, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO, stable normalized parameter destinations, dual multimode filters, and smoke tests. The wavetable engine currently supports immutable in-memory frame sets plus continuous frame morphing; file import and band-limited mipmaps are still pending. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.
