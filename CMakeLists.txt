@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.8.0 LANGUAGES CXX)
+project(Tryst VERSION 0.9.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,6 +23,8 @@ add_library(tryst_core STATIC
     Source/Modulation/Lfo.cpp
     Source/Modulation/ModMatrix.cpp
     Source/Modulation/ModulationRuntime.cpp
+    Source/State/PatchApplier.cpp
+    Source/State/PatchCodec.cpp
 )
 
 target_include_directories(tryst_core PUBLIC Source)
@@ -48,4 +50,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_fast_modulation_tests Tests/FastModulationTests.cpp)
     target_link_libraries(tryst_fast_modulation_tests PRIVATE tryst_core)
     add_test(NAME tryst_fast_modulation_tests COMMAND tryst_fast_modulation_tests)
+
+    add_executable(tryst_patch_state_tests Tests/PatchStateTests.cpp)
+    target_link_libraries(tryst_patch_state_tests PRIVATE tryst_core)
+    add_test(NAME tryst_patch_state_tests COMMAND tryst_patch_state_tests)
 endif()
