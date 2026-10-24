@@ -261,3 +261,4 @@ void GranularEngine::clearGrains() noexcept
     for (auto& grain : grains)
         grain = {};
 }
+}

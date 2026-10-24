@@ -39,3 +39,4 @@ bool TuningTable::setOctaveOffsets(std::span<const float> offsets) noexcept
         noteOffsets[note] = offsets[note % 12];
     return true;
 }
+}
