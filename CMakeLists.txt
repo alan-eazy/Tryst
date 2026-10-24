@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.10.0 LANGUAGES CXX)
+project(Tryst VERSION 0.11.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,8 +22,10 @@ add_library(tryst_core STATIC
     Source/Modulation/AdsrEnvelope.cpp
     Source/Modulation/FastModulationRuntime.cpp
     Source/Modulation/Lfo.cpp
+    Source/Modulation/Mseg.cpp
     Source/Modulation/ModMatrix.cpp
     Source/Modulation/ModulationRuntime.cpp
+    Source/Modulation/StepSequencer.cpp
     Source/State/PatchApplier.cpp
     Source/State/PatchCodec.cpp
 )
@@ -59,4 +61,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_noise_engine_tests Tests/NoiseEngineTests.cpp)
     target_link_libraries(tryst_noise_engine_tests PRIVATE tryst_core)
     add_test(NAME tryst_noise_engine_tests COMMAND tryst_noise_engine_tests)
+
+    add_executable(tryst_shape_modulator_tests Tests/ShapeModulatorTests.cpp)
+    target_link_libraries(tryst_shape_modulator_tests PRIVATE tryst_core)
+    add_test(NAME tryst_shape_modulator_tests COMMAND tryst_shape_modulator_tests)
 endif()
