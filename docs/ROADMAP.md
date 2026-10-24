@@ -12,7 +12,7 @@
 - [x] Voice-local fast LFO modulation lane (16-sample bounded updates; true per-sample paths still selective/future)
 - [x] Parameter registry / normalized destination map
 - [ ] Host wrapper (VST3 + CLAP first)
-- [x] Basic preset serialization (versioned schema-1 text codec; external asset references still future)
+- [x] Basic preset serialization (schema-2 text codec with schema-1 migration; external asset references still future)
 - [x] Unit tests and DSP smoke tests
 
 ## P1 — Core instrument
@@ -23,7 +23,7 @@
 - [~] Sampler / multisample engine (single-sample playback/looping complete; multisample mapping + file decode pending)
 - [x] Granular engine (shared sample assets + position/size/density/spray/pitch cloud core)
 - [x] Noise / texture generator (white/pink/brown morph + stereo + tuned sample-and-hold texture)
-- [ ] MSEG and step modulation
+- [x] MSEG and step modulation (2 voice-local MSEGs + 2 fixed 16-step sources; 16-sample fast lane)
 - [~] 8 macros + XY control (runtime/routing complete; performance UI pending)
 - [ ] Flexible FX rack
 - [ ] MPE and microtuning
