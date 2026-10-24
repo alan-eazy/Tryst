@@ -37,6 +37,10 @@ Heavy engine data derives from `EngineAsset` and is published to voices as immut
 
 `GranularEngine` consumes the same immutable `SampleData` assets as the sampler. Each engine instance owns a fixed pool of 32 grains, so scheduling and rendering require no heap allocation. Grain position, size, density, spray and pitch are exposed as stable normalized destinations, while note pitch and common generator tune are combined with the sample root note and source sample rate. Grains use linear source interpolation and a Hann window; deterministic voice-local pseudo-random spray avoids shared RNG state on the audio thread. The current implementation is a bounded real-time cloud engine rather than an offline time-stretcher; stereo spread, freeze modes and richer grain-window choices remain future extensions.
 
+### 1.6 Procedural noise and texture
+
+`NoiseEngine` is an asset-free procedural source. It generates independent deterministic white streams per stereo side, derives pink noise with a fixed filter bank and brown noise with a bounded integrator, then continuously morphs white -> pink -> brown through the `engine.noise.color` destination. `engine.noise.stereo` crossfades from mono-correlated output to independent stereo channels. `engine.noise.texture` blends the colored stream toward a sample-and-hold signal; common generator tune changes the hold rate in semitone ratios, turning the same source into pitched digital texture. All state is voice-local and bounded, with no allocation or shared random generator in render.
+
 ## 2. Modulation
 
 The modulation matrix is central infrastructure. Engines and effects expose destinations through stable destination IDs; LFOs, envelopes, MSEGs, random sources, macros and expressive controls provide sources.
