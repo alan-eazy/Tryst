@@ -140,6 +140,48 @@ bool VoiceManager::setModulationSource(tryst::mod::SourceId source, float value)
     return true;
 }
 
+bool VoiceManager::configureVoiceLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept
+{
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.configureFastLfo(index, rateHz, waveform) && success;
+    return success;
+}
+
+bool VoiceManager::addFastModulationRoute(tryst::mod::Route route) noexcept
+{
+    if (route.target.domain == tryst::mod::TargetDomain::global)
+        return false;
+    if (route.target.domain == tryst::mod::TargetDomain::generator && route.target.slot >= Voice::generatorSlots)
+        return false;
+
+    const auto* descriptor = tryst::params::ParameterRegistry::find(route.target.parameter);
+    if (descriptor == nullptr || !descriptor->audioRateCapable)
+        return false;
+
+    if (!ensureTargetBase(route.target))
+        return false;
+
+    bool success = true;
+    for (auto& voice : voices)
+        success = voice.addFastModulationRoute(route) && success;
+
+    refreshTarget(route.target);
+    return success;
+}
+
+void VoiceManager::clearFastModulationRoutes() noexcept
+{
+    for (auto& voice : voices)
+        voice.clearFastModulationRoutes();
+    refreshAllModulation();
+}
+
+std::size_t VoiceManager::fastModulationRouteCount() const noexcept
+{
+    return voices.front().fastModulationRouteCount();
+}
+
 void VoiceManager::noteOn(const NoteEvent& event) noexcept
 {
     auto& voice = chooseVoice();
@@ -227,4 +269,5 @@ void VoiceManager::refreshAllModulation() noexcept
 {
     for (std::size_t i = 0; i < baseTargets.size(); ++i)
         refreshTarget(baseTargets[i].target);
+}
 }

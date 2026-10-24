@@ -23,10 +23,15 @@ void Lfo::setRateHz(float hz) noexcept
 
 float Lfo::nextSample() noexcept
 {
-    const auto output = valueAt(phase);
-    phase += static_cast<float>(rateHz / sampleRate);
-    phase -= std::floor(phase);
+    const auto output = currentValue();
+    advanceSamples(1);
     return output;
+}
+
+void Lfo::advanceSamples(std::uint32_t samples) noexcept
+{
+    phase += static_cast<float>((rateHz / sampleRate) * static_cast<double>(samples));
+    phase -= std::floor(phase);
 }
 
 float Lfo::valueAt(float p) const noexcept
@@ -44,4 +49,5 @@ float Lfo::valueAt(float p) const noexcept
     }
 
     return 0.0f;
+}
 }

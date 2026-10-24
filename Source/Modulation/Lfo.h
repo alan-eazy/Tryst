@@ -21,6 +21,8 @@ public:
     void setWaveform(LfoWaveform next) noexcept { waveform = next; }
 
     [[nodiscard]] float nextSample() noexcept;
+    [[nodiscard]] float currentValue() const noexcept { return valueAt(phase); }
+    void advanceSamples(std::uint32_t samples) noexcept;
     [[nodiscard]] float currentPhase() const noexcept { return phase; }
 
 private:

@@ -49,7 +49,11 @@ Engine parameters are addressed through stable 32-bit destination IDs derived fr
 
 Modulation routes now target a domain, slot and stable parameter destination rather than a bare parameter ID. This lets the same parameter ID be addressed independently on generator slots 1–4 while filters remain voice-local destinations. `ModulationRuntime` stores source values in fixed-size arrays and evaluates routes without heap allocation. Eight macro sources plus X/Y performance sources are wired through `VoiceManager`; changing a performance source refreshes all tracked base targets and broadcasts the resulting normalized values to every voice.
 
-The current performance-source path is intentionally control-rate. It is suitable for macros, XY gestures and host automation, but it is not presented as the final audio-rate LFO/envelope path. Selected audio-rate-capable destinations will later receive a dedicated per-sample or small-block modulation path.
+The performance-source path is intentionally control-rate. It is suitable for macros, XY gestures and host automation.
+
+### 2.3 Voice-local fast modulation
+
+Each voice also owns a `FastModulationRuntime` with four independent LFOs. Continuous destinations marked `audioRateCapable` in the parameter registry may be routed through this lane. Voice rendering is split into fixed 16-sample chunks; at each chunk boundary the voice evaluates fast routes on top of the current macro/XY-adjusted base values, applies generator/filter destinations directly, renders the chunk, then advances its LFO phases. LFO phases reset when a voice starts, making the current implementation deterministic and voice-local. Toggle/discrete destinations are rejected from the fast lane. This is a bounded high-rate control path, not a claim of true per-sample modulation; genuinely audio-rate FM/PM and other sensitive destinations can receive specialized per-sample paths later.
 
 Long-term requirements:
 

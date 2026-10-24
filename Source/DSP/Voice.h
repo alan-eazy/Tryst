@@ -4,6 +4,7 @@
 #include "EngineSlot.h"
 #include "FilterChain.h"
 #include "../Modulation/AdsrEnvelope.h"
+#include "../Modulation/FastModulationRuntime.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -25,6 +26,10 @@ public:
     [[nodiscard]] bool setEngineAsset(std::size_t slot, std::shared_ptr<const EngineAsset> asset) noexcept;
     [[nodiscard]] bool setFilterParameter(tryst::params::DestinationId destination, float normalized) noexcept;
     void setAmpEnvelope(tryst::mod::AdsrEnvelope::Parameters parameters) noexcept;
+    [[nodiscard]] bool configureFastLfo(std::size_t index, float rateHz, tryst::mod::LfoWaveform waveform) noexcept;
+    [[nodiscard]] bool addFastModulationRoute(tryst::mod::Route route) noexcept;
+    void clearFastModulationRoutes() noexcept;
+    [[nodiscard]] std::size_t fastModulationRouteCount() const noexcept { return fastModulation.routeCount(); }
 
     void start(const NoteEvent& event, std::uint64_t newAge) noexcept;
     void release(std::int32_t note, float releaseVelocity) noexcept;
@@ -38,9 +43,11 @@ public:
 
 private:
     void stopEngines() noexcept;
+    void applyFastTarget(tryst::mod::TargetId target, float normalized) noexcept;
 
     std::array<EngineSlot, generatorSlots> slots;
     tryst::mod::AdsrEnvelope ampEnvelope;
+    tryst::mod::FastModulationRuntime fastModulation;
     FilterChain filters;
     std::vector<float> scratchLeft;
     std::vector<float> scratchRight;

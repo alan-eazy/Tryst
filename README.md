@@ -20,6 +20,7 @@
 - Dual per-voice multimode filters with serial/parallel routing
 - Central modulation matrix with slot-aware targets and bipolar depth
 - Working 8-macro + XY modulation runtime for generator and filter destinations
+- Four voice-local LFOs with a bounded 16-sample fast-modulation lane for continuous generator/filter destinations
 - Voice-local and global modulation distinction
 - Stable parameter registry with normalized runtime destination IDs
 - Roadmap for routing, filters, effects, MPE, microtuning and preset morphing
@@ -28,4 +29,4 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/ROADMAP.md`](docs/
 
 ## Status
 
-The DSP core now contains the architecture foundation, analog, wavetable, sampler and granular engines, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO, stable normalized parameter destinations, dual multimode filters, live macro/XY modulation routing, and smoke tests. The wavetable engine currently supports immutable in-memory frame sets plus continuous frame morphing; file import and band-limited mipmaps are still pending. The sampler supports in-memory mono/stereo assets and loop regions; multisample mapping and file decoding are still pending. The granular engine reuses the same immutable sample assets with a fixed 32-grain voice-local pool and control-rate position/size/density/spray/pitch destinations. Macro/XY routing currently updates at control rate; dedicated audio-rate modulation paths remain planned. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.
+The DSP core now contains the architecture foundation, analog, wavetable, sampler and granular engines, 16-voice polyphony with deterministic oldest-voice stealing, a per-voice ADSR amplitude envelope, a reusable LFO, stable normalized parameter destinations, dual multimode filters, live macro/XY modulation routing, and smoke tests. The wavetable engine currently supports immutable in-memory frame sets plus continuous frame morphing; file import and band-limited mipmaps are still pending. The sampler supports in-memory mono/stereo assets and loop regions; multisample mapping and file decoding are still pending. The granular engine reuses the same immutable sample assets with a fixed 32-grain voice-local pool and control-rate position/size/density/spray/pitch destinations. Macro/XY routing updates at control rate, while voice-local LFO routes can update continuous destinations every 16 samples. True per-sample/audio-rate paths remain planned for the subset of destinations that benefit from them. Plugin-wrapper integration remains deliberately separate so the DSP core stays testable and host-agnostic.

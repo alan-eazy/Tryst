@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Tryst VERSION 0.7.0 LANGUAGES CXX)
+project(Tryst VERSION 0.8.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,7 @@ add_library(tryst_core STATIC
     Source/DSP/WavetableData.cpp
     Source/DSP/WavetableEngine.cpp
     Source/Modulation/AdsrEnvelope.cpp
+    Source/Modulation/FastModulationRuntime.cpp
     Source/Modulation/Lfo.cpp
     Source/Modulation/ModMatrix.cpp
     Source/Modulation/ModulationRuntime.cpp
@@ -43,4 +44,8 @@ if (TRYST_BUILD_TESTS)
     add_executable(tryst_granular_tests Tests/GranularTests.cpp)
     target_link_libraries(tryst_granular_tests PRIVATE tryst_core)
     add_test(NAME tryst_granular_tests COMMAND tryst_granular_tests)
+
+    add_executable(tryst_fast_modulation_tests Tests/FastModulationTests.cpp)
+    target_link_libraries(tryst_fast_modulation_tests PRIVATE tryst_core)
+    add_test(NAME tryst_fast_modulation_tests COMMAND tryst_fast_modulation_tests)
 endif()
